@@ -1,0 +1,85 @@
+APEXFLOW v2 — çok seviyeli / çok sınavlı İngilizce platformu
+============================================================
+
+NE DEĞİŞTİ (v2)
+- CEFR seviye omurgası (A1→C2) + 16 soruluk seviye tespit testi
+- Kalıcı kayıt: XP, günlük seri (streak), seviye, tamamlanan dersler,
+  kelime tekrar takvimi — hepsi tarayıcıda (localStorage) saklanır
+- Aralıklı tekrar (SRS / Anki mantığı) ile kelime tekrarı
+- Yeni modüller: Gramer Atölyesi, Kelime Hazinesi, Dinleme Odası
+  (tarayıcı TTS), Yazma Stüdyosu (rubrik + öz-değerlendirme)
+- Sınav sekmeleri: IELTS, TOEFL (aktif) · YDS, YÖKDİL (yakında) · Sıfırdan
+- Eski modüller (Lexical Arena, Reading Matrix, Syntax Forge,
+  Pressure Cooker) korunur ve B2+ / sınav izlerinde sunulur
+
+KLASÖR YAPISI
+  src/catalog.js   -> TÜM içerik (seviye, test, kelime, gramer, dinleme,
+                       yazma, sınav profilleri). İçerik buraya eklenir.
+  src/lib.js       -> motor: kayıt (localStorage), SRS, seri, TTS, band
+  src/modules.jsx  -> tüm ekranlar/bileşenler
+  src/styles.jsx   -> tema (scoped CSS)
+  src/ApexFlow.jsx -> kök: yönlendirme + seviye kapısı
+  src/main.jsx     -> giriş
+
+KURULUM / DERLEME
+  npm install
+  npm run build        -> dist/index.html (tek dosya, her şey gömülü)
+  npm run dev          -> yerelde geliştirme sunucusu
+
+YAYINLAMA (Netlify)
+  dist/index.html dosyasını app.netlify.com/drop sayfasına sürükle.
+  (Ya da apexflow.zip'i sürükle.) Mevcut siteyi güncellemek için
+  aynı yere yeni dosyayı bırakman yeterli.
+
+NOT
+  Tek harici bağımlılık React + lucide-react (ikonlar). Tailwind YOK.
+  İçerik tamamen src/catalog.js içindedir; yeni kelime/ders/metin
+  eklemek için sadece o dosyaya kayıt eklemen yeterli.
+
+------------------------------------------------------------
+v2.1 EKLERİ
+- İçerik büyüdü: kelime 48->88, dinleme 3->7, okuma 2->4,
+  seviye testi 16->24 soru, yazma görevleri 4->8
+- Yazma Stüdyosu'na puanlama eklendi:
+  * Otomatik analiz (uzunluk/paragraf/bağlaç/tekrar) — kurulumsuz
+  * AI ile değerlendir (isteğe bağlı): katalogdaki ayarlara kendi
+    Anthropic API anahtarını gir. Anahtar yalnızca tarayıcıda saklanır,
+    ücret kendi hesabından işler. Model: claude-sonnet-4-6
+    (src/lib.js içindeki AI_MODEL ile değiştirilebilir).
+
+------------------------------------------------------------
+v2.2 EKLERİ
+- Seviye testi: şık değiştirilebilir + "Kontrol et" sonrası doğru/yanlış
+  ve doğru cevap gösterilir (anında kilitlenme yok)
+- Modül ikonları renk kodlu (gramer mavi, dinleme mor, kelime turuncu...)
+- Seviye sekmelerinin altında mini ilerleme çubuğu
+- "Günün Görevleri" paneli: kelime tekrarı / XP / gramer / dinleme
+  hedefleri günlük sıfırlanır (retention)
+- Dinleme ekranında not defteri (kaydedilmez; TOEFL not-alma pratiği)
+- AI puanlama TOEFL görevlerinde 0-30 ölçeğiyle çerçevelenir
+
+------------------------------------------------------------
+v2.3 — DIŞ İÇERİK (content.json) + Okuma Parçaları
+- Yeni "Okuma Parçaları" modülü: basit makale + sorular formatı
+- Uygulama açılışta bir content.json çekip içeriği kataloğa EKLER
+  (mevcut içeriği SİLMEZ; sadece üzerine ekler). Dosyayı güncelleyince
+  herkeste değişir; index'i yeniden yüklemen gerekmez.
+
+İçerik kaynağını ayarlamak (2 yol):
+  A) Kalıcı (herkes için): src/lib.js içindeki CONTENT_URL sabitine kendi
+     ham (raw) URL'ini yaz, bir kez build + deploy et.
+  B) Hızlı/cihaza özel test: uygulamada Ayarlar > "İçerik kaynağı" alanına
+     URL'i yapıştır (anında yükler).
+
+GitHub ile sürekli güncelleme akışı (önerilen):
+  1. GitHub'da bir repo aç, içine content.json koy (örnek dosya pakette).
+  2. Dosyanın RAW adresini al:
+     https://raw.githubusercontent.com/<kullanıcı>/<repo>/main/content.json
+  3. Bu adresi CONTENT_URL'e yaz (A) ya da Ayarlar'a yapıştır (B).
+  4. Bundan sonra içerik eklemek = content.json'u GitHub'da düzenleyip
+     kaydetmek. Site otomatik günceller; yeniden deploy YOK.
+  (CDN alternatifi: jsDelivr - cdn.jsdelivr.net/gh/<kullanıcı>/<repo>/content.json;
+   CORS dostu ve hızlı ama birkaç saat önbellek gecikmesi olabilir.)
+
+content.json formatı: paketteki content.json örneğine bak. id benzersiz,
+lv = A1..C2, ans = doğru şıkkın sırası (0'dan). Çakışan id atlanır.
