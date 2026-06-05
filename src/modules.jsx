@@ -5,13 +5,13 @@ import {
   Scan, Gauge, TrendingUp, Lightbulb, Home as HomeIcon, ChevronLeft,
   Crosshair, Sparkles, Volume2, RefreshCw, GraduationCap, PenLine,
   ListChecks, Languages, BookMarked, Headphones, Repeat, Star, Lock,
-  ChevronRight, RotateCw, Trophy, Pause, Sun, Moon, FileText,
+  ChevronRight, RotateCw, Trophy, Pause, Sun, Moon, FileText, Replace,
 } from "lucide-react";
 import { tierFor, speak, stopSpeak, speechSupported, reviewQueue, analyzeWriting, scoreWithAI } from "./lib.js";
 import {
   LEXICAL, PASSAGES, SYNTAX, SPEAKING,
   LEVELS, LV_ORDER, lvIndex, levelMeta,
-  PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES, CLOZE,
+  PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES, CLOZE, RESTATE,
   EXAMS, MODULE_INFO,
 } from "./catalog.js";
 
@@ -849,6 +849,7 @@ const MODULE_ICON = {
   listening: <Headphones size={20} />, articles: <BookMarked size={20} />, reading: <BookOpen size={20} />,
   lexical: <Crosshair size={20} />, syntax: <Hammer size={20} />,
   speaking: <Mic size={20} />, writing: <PenLine size={20} />, cloze: <FileText size={20} />,
+  restate: <Replace size={20} />,
 };
 function ModuleCard({ k, ctx, go, done }) {
   const info = MODULE_INFO[k];
@@ -1700,6 +1701,50 @@ function ClozeItem({ item, store, award, onBack }) {
             <div className="af-result-lv">{score}/{item.blanks.length}</div>
             <p className="af-result-blurb">Yanlışların varsa paragrafa dönüp boşluğun çevresindeki ipuçlarını tekrar oku.</p>
             <button className="af-q-next af-result-go" onClick={onBack}>Diğer parçalar <ArrowRight size={16} /></button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+
+/* ============================================================
+   RESTATE  (closest-in-meaning sentence — YDS restatement)
+   A deck of stem sentences; reuses the shared MCQRunner.
+============================================================ */
+export function RestateRoom({ level, store, award, onBack }) {
+  const items = useMemo(() => {
+    const f = RESTATE.filter((r) => !level || lvIndex(r.lv) <= lvIndex(level));
+    return f.length ? f : RESTATE;
+  }, [level]);
+  const quizItems = useMemo(
+    () => items.map((r) => ({ q: r.stem, opts: r.opts, ans: r.ans, tr: r.tr })),
+    [items]
+  );
+  const [phase, setPhase] = useState("quiz"); // quiz -> done
+  const [score, setScore] = useState(0);
+  return (
+    <>
+      <ModuleBar title="Anlamca En Yakın Cümle" sub="YDS · restatement" onBack={onBack} />
+      <div className="af-substage">
+        {RESTATE.length === 0 ? (
+          <div className="af-empty"><AlertTriangle size={14} /> Henüz cümle yok — içerik kaynağından (content.json) eklenebilir.</div>
+        ) : phase === "quiz" ? (
+          <MCQRunner items={quizItems} award={award} points={16}
+            footer={<div className="af-restate-hint"><Replace size={13} /> Cümleye anlamca en yakın seçeneği işaretle.</div>}
+            onFinish={(ok) => {
+              setScore(ok);
+              items.forEach((r) => store.markDone("restate:" + r.id));
+              store.touchStreak();
+              setPhase("done");
+            }} />
+        ) : (
+          <div className="af-result">
+            <div className="af-result-cap">RESTATEMENT TAMAM</div>
+            <div className="af-result-lv">{score}/{items.length}</div>
+            <p className="af-result-blurb">Yanlışlarında köprü yapıyı (zıtlık, neden-sonuç, koşul, edilgen) tekrar gözden geçir.</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
