@@ -2,7 +2,7 @@
    APEXFLOW :: LIB  (engine — state, persistence, SRS, speech)
 ============================================================ */
 import { useState, useEffect, useRef, useCallback } from "react";
-import { BANDS, VOCAB, LISTENING, ARTICLES, CLOZE, RESTATE, ODDOUT, DIALOGUE, PARACOMP, TRANSLATE, GRAMMAR, WRITING } from "./catalog.js";
+import { BANDS, VOCAB, LISTENING, ARTICLES, CLOZE, RESTATE, ODDOUT, DIALOGUE, PARACOMP, TRANSLATE, TOEFL_INTEGRATED, GRAMMAR, WRITING } from "./catalog.js";
 
 /* ---------- band / score concordance ---------- */
 export function tierFor(xp) {
@@ -336,6 +336,11 @@ const _validParacomp = (p) => _isStr(p.id) && _isStr(p.lv) && _isStr(p.text) && 
   _validOpts4(p.opts, p.ans);
 const _validTranslate = (t) => _isStr(t.id) && _isStr(t.lv) && _isStr(t.source) &&
   (t.dir === "en2tr" || t.dir === "tr2en") && _validOpts4(t.opts, t.ans);
+const _validToeflInt = (t) => _isStr(t.id) && _isStr(t.lv) &&
+  (t.type === "writing" || t.type === "speaking") &&
+  t.reading && _isStr(t.reading.title) && _isStr(t.reading.body) &&
+  t.lecture && _isStr(t.lecture.body) && _isStr(t.prompt) &&
+  Array.isArray(t.keyPoints) && t.keyPoints.length >= 1 && t.keyPoints.every(_isStr);
 const _validGrammar = (g) => _isStr(g.id) && _isStr(g.lv) && _isStr(g.title) && _isStr(g.exp) && _validItems(g.items);
 const _validWriting = (w) => _isStr(w.id) && _isStr(w.lv) && _isStr(w.type) && _isStr(w.prompt) && Number.isInteger(w.minWords);
 
@@ -351,7 +356,7 @@ function mergeById(target, incoming, validate) {
 
 // fetch + merge; mutates the catalog arrays in place (modules read them live)
 export async function loadExternalContent(url) {
-  const report = { vocab: 0, listening: 0, articles: 0, cloze: 0, restate: 0, oddout: 0, dialogue: 0, paracomp: 0, translate: 0, grammar: 0, writing: 0, total: 0, error: null };
+  const report = { vocab: 0, listening: 0, articles: 0, cloze: 0, restate: 0, oddout: 0, dialogue: 0, paracomp: 0, translate: 0, toeflint: 0, grammar: 0, writing: 0, total: 0, error: null };
   if (!url) { report.error = "no-url"; return report; }
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -366,9 +371,10 @@ export async function loadExternalContent(url) {
     report.dialogue = mergeById(DIALOGUE, data.dialogue, _validDialogue);
     report.paracomp = mergeById(PARACOMP, data.paracomp, _validParacomp);
     report.translate = mergeById(TRANSLATE, data.translate, _validTranslate);
+    report.toeflint = mergeById(TOEFL_INTEGRATED, data.toeflIntegrated, _validToeflInt);
     report.grammar = mergeById(GRAMMAR, data.grammar, _validGrammar);
     report.writing = mergeById(WRITING, data.writing, _validWriting);
-    report.total = report.vocab + report.listening + report.articles + report.cloze + report.restate + report.oddout + report.dialogue + report.paracomp + report.translate + report.grammar + report.writing;
+    report.total = report.vocab + report.listening + report.articles + report.cloze + report.restate + report.oddout + report.dialogue + report.paracomp + report.translate + report.toeflint + report.grammar + report.writing;
   } catch (e) { report.error = (e && e.message) || "yükleme hatası"; }
   return report;
 }
