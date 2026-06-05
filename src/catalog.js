@@ -750,6 +750,17 @@ export function vocabForLevel(level) {
 ============================================================ */
 export const ARTICLES = [
   {
+    id: "a_morning_routine", lv: "A2", title: "My Morning Routine",
+    body:
+      "I wake up at seven o'clock every morning. First, I get out of bed and open the window to let in some fresh air. Then I wash my face and brush my teeth in the bathroom.\n\n" +
+      "After that, I make a cup of tea and eat a simple breakfast, usually bread with cheese and a banana. While I eat, I listen to the radio and check the weather. At half past seven, I get dressed and pack my bag. I leave the house at eight o'clock and walk to the bus stop near my home.",
+    items: [
+      { q: "What time does the writer wake up?", opts: ["At seven o'clock", "At eight o'clock", "At half past seven", "At six o'clock"], ans: 0, tr: "Metin: yazar her sabah saat yedide uyanır." },
+      { q: "What does the writer do first after getting out of bed?", opts: ["Makes tea", "Opens the window", "Packs the bag", "Walks to the bus stop"], ans: 1, tr: "Yataktan kalktıktan sonra ilk olarak pencereyi açar." },
+      { q: "How does the writer go to the bus stop?", opts: ["By car", "By bus", "On foot", "By bike"], ans: 2, tr: "Yazar evden çıkıp otobüs durağına yürür." },
+    ],
+  },
+  {
     id: "a_yawn", lv: "B1", title: "Why We Yawn",
     body:
       "Almost everyone yawns, and so do many animals, from cats to birds. Yet scientists still do not fully agree on why we do it.\n\n" +
