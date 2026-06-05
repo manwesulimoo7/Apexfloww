@@ -6,12 +6,14 @@ import {
   Crosshair, Sparkles, Volume2, RefreshCw, GraduationCap, PenLine,
   ListChecks, Languages, BookMarked, Headphones, Repeat, Star, Lock,
   ChevronRight, RotateCw, Trophy, Pause, Sun, Moon, FileText, Replace, Filter,
+  MessageSquare, AlignLeft, Languages as LanguagesIcon,
 } from "lucide-react";
 import { tierFor, speak, stopSpeak, speechSupported, reviewQueue, analyzeWriting, scoreWithAI } from "./lib.js";
 import {
   LEXICAL, PASSAGES, SYNTAX, SPEAKING,
   LEVELS, LV_ORDER, lvIndex, levelMeta,
   PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES, CLOZE, RESTATE, ODDOUT,
+  DIALOGUE, PARACOMP, TRANSLATE,
   EXAMS, MODULE_INFO,
 } from "./catalog.js";
 
@@ -850,6 +852,7 @@ const MODULE_ICON = {
   lexical: <Crosshair size={20} />, syntax: <Hammer size={20} />,
   speaking: <Mic size={20} />, writing: <PenLine size={20} />, cloze: <FileText size={20} />,
   restate: <Replace size={20} />, oddout: <Filter size={20} />,
+  dialogue: <MessageSquare size={20} />, paracomp: <AlignLeft size={20} />, translate: <LanguagesIcon size={20} />,
 };
 function ModuleCard({ k, ctx, go, done }) {
   const info = MODULE_INFO[k];
@@ -1807,6 +1810,131 @@ export function OddoutRoom({ level, store, award, onBack }) {
       </div>
     </>
   );
+}
+
+
+/* shared : small deck runner for YDS-style single-question modules
+   (each item = one MCQ). Mirrors RestateRoom/OddoutRoom exactly. */
+function DeckRoom({ title, sub, empty, quizItems, items, prefix, store, award, onBack, hint, doneCap }) {
+  const [phase, setPhase] = useState("quiz"); // quiz -> done
+  const [score, setScore] = useState(0);
+  return (
+    <>
+      <ModuleBar title={title} sub={sub} onBack={onBack} />
+      <div className="af-substage">
+        {items.length === 0 ? (
+          <div className="af-empty"><AlertTriangle size={14} /> {empty}</div>
+        ) : phase === "quiz" ? (
+          <MCQRunner items={quizItems} award={award} points={16}
+            footer={hint}
+            onFinish={(ok) => {
+              setScore(ok);
+              items.forEach((it) => store.markDone(prefix + ":" + it.id));
+              store.touchStreak();
+              setPhase("done");
+            }} />
+        ) : (
+          <div className="af-result">
+            <div className="af-result-cap">{doneCap}</div>
+            <div className="af-result-lv">{score}/{items.length}</div>
+            <p className="af-result-blurb">Yanlışlarında ipuçlarını (bağlam, bağlaç, anahtar kelimeler) yeniden gözden geçir.</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   DIALOGUE  (two-person dialogue completion — YDS)
+============================================================ */
+export function DialogueRoom({ level, store, award, onBack }) {
+  const items = useMemo(() => {
+    const f = DIALOGUE.filter((d) => !level || lvIndex(d.lv) <= lvIndex(level));
+    return f.length ? f : DIALOGUE;
+  }, [level]);
+  const quizItems = useMemo(
+    () => items.map((d) => ({
+      q: (
+        <div className="af-dialogue">
+          {d.lines.map((ln, i) => (
+            <p key={i} className={"af-dlg-line" + (i === d.blankIndex ? " is-blank" : "")}>
+              <span className="af-dlg-sp">{ln.sp}:</span>
+              <span className="af-dlg-t">{i === d.blankIndex ? "____" : ln.t}</span>
+            </p>
+          ))}
+        </div>
+      ),
+      opts: d.opts, ans: d.ans, tr: d.tr,
+    })),
+    [items]
+  );
+  return <DeckRoom title="Diyalog Tamamlama" sub="YDS · dialogue completion"
+    empty="Henüz diyalog yok — içerik kaynağından (content.json) eklenebilir."
+    quizItems={quizItems} items={items} prefix="dialogue" doneCap="DİYALOG TAMAM"
+    store={store} onBack={onBack} award={award}
+    hint={<div className="af-restate-hint"><MessageSquare size={13} /> Boş repliğe en uygun cümleyi seç.</div>} />;
+}
+
+/* ============================================================
+   PARACOMP  (paragraph completion — YDS)
+============================================================ */
+export function ParacompRoom({ level, store, award, onBack }) {
+  const items = useMemo(() => {
+    const f = PARACOMP.filter((p) => !level || lvIndex(p.lv) <= lvIndex(level));
+    return f.length ? f : PARACOMP;
+  }, [level]);
+  const quizItems = useMemo(
+    () => items.map((p) => {
+      const parts = p.text.split("----");
+      return {
+        q: (
+          <p className="af-paracomp-p">
+            {parts.flatMap((seg, i) =>
+              i === 0
+                ? [<span key={"s" + i}>{seg}</span>]
+                : [<span key={"g" + i} className="af-paracomp-gap"> ____ </span>, <span key={"s" + i}>{seg}</span>]
+            )}
+          </p>
+        ),
+        opts: p.opts, ans: p.ans, tr: p.tr,
+      };
+    }),
+    [items]
+  );
+  return <DeckRoom title="Paragraf Tamamlama" sub="YDS · paragraph completion"
+    empty="Henüz paragraf yok — içerik kaynağından (content.json) eklenebilir."
+    quizItems={quizItems} items={items} prefix="paracomp" doneCap="PARAGRAF TAMAM"
+    store={store} onBack={onBack} award={award}
+    hint={<div className="af-restate-hint"><AlignLeft size={13} /> ---- yerine, öncesi ve sonrasıyla uyumlu cümleyi seç.</div>} />;
+}
+
+/* ============================================================
+   TRANSLATE  (best translation — YDS)
+============================================================ */
+export function TranslateRoom({ level, store, award, onBack }) {
+  const items = useMemo(() => {
+    const f = TRANSLATE.filter((t) => !level || lvIndex(t.lv) <= lvIndex(level));
+    return f.length ? f : TRANSLATE;
+  }, [level]);
+  const quizItems = useMemo(
+    () => items.map((t) => ({
+      q: (
+        <div className="af-translate">
+          <div className="af-tr-dir">{t.dir === "tr2en" ? "Türkçe → İngilizce" : "İngilizce → Türkçe"}</div>
+          <div className="af-tr-source">{t.source}</div>
+        </div>
+      ),
+      opts: t.opts, ans: t.ans, tr: t.tr,
+    })),
+    [items]
+  );
+  return <DeckRoom title="Çeviri" sub="YDS · translation"
+    empty="Henüz cümle yok — içerik kaynağından (content.json) eklenebilir."
+    quizItems={quizItems} items={items} prefix="translate" doneCap="ÇEVİRİ TAMAM"
+    store={store} onBack={onBack} award={award}
+    hint={<div className="af-restate-hint"><LanguagesIcon size={13} /> Anlamı en doğru veren çeviriyi seç.</div>} />;
 }
 
 

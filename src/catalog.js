@@ -712,11 +712,11 @@ export const EXAMS = [
   { id: "YDS", name: "YDS / e-YDS", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Çeviri", "Okuma"],
     blurb: "Tamamen çoktan seçmeli — konuşma/yazma/dinleme YOK. Kelime, gramer, cloze, çeviri (TR↔EN), paragraf tamamlama, anlamca en yakın cümle, akışı bozan cümle, diyalog tamamlama.",
-    modules: ["cloze", "restate", "oddout", "grammar", "lexical", "articles"] },
+    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "grammar", "lexical", "articles"] },
   { id: "YOKDIL", name: "YÖKDİL (Fen · Sağlık · Sosyal)", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Okuma"],
     blurb: "YDS formatına benzer; alanına göre (Fen, Sağlık, Sosyal) terim ağırlıklı. Akademik personel ve TUS/DUS dil şartı için de kullanılır.",
-    modules: ["cloze", "restate", "oddout", "grammar", "lexical", "articles"] },
+    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "grammar", "lexical", "articles"] },
   { id: "GENEL", name: "Sıfırdan İngilizce", status: "active", scoring: "CEFR A1→C2",
     skills: ["Gramer", "Kelime", "Dinleme", "Okuma"],
     blurb: "Sınavdan bağımsız temel. Seviye testiyle başla; A1’den ilerle ya da eksik temelini kapat.",
@@ -732,6 +732,9 @@ export const MODULE_INFO = {
   cloze:    { name: "Boşluk Doldurma", sub: "YDS/YÖKDİL cloze", minLv: "B2" },
   restate:  { name: "Anlamca En Yakın Cümle", sub: "YDS · restatement", minLv: "B2" },
   oddout:   { name: "Akışı Bozan Cümle", sub: "YDS · irrelevant sentence", minLv: "B2" },
+  dialogue: { name: "Diyalog Tamamlama", sub: "YDS · dialogue completion", minLv: "B2" },
+  paracomp: { name: "Paragraf Tamamlama", sub: "YDS · paragraph completion", minLv: "B2" },
+  translate:{ name: "Çeviri", sub: "YDS · translation", minLv: "B2" },
   reading:  { name: "Deductive Reading Matrix", sub: "T/F/NG · başlık · X-Ray", minLv: "B2" },
   lexical:  { name: "Lexical Arena", sub: "süreli eşanlam atışı", minLv: "B2" },
   syntax:   { name: "Syntax Forge", sub: "cümle kurma · Writing", minLv: "B2" },
@@ -991,5 +994,259 @@ export const ODDOUT = [
       "She had always dreamed of becoming a professional violinist.",
     ], ans: 4,
     tr: "Paragraf yanardağlar hakkında; V. cümle profesyonel kemancı olma hayalinden bahsederek konuyu bozuyor.",
+  },
+];
+
+/* ============================================================
+   DIALOGUE — two-person dialogue completion (YDS).
+   One reply is blank; pick the missing line. Reuses MCQRunner.
+   Mergeable from content.json (data.dialogue).
+   Schema: { id, lv, lines:[{sp,t}], blankIndex, opts, ans, tr }
+   ans starts at 0; tr = short Turkish rationale.
+============================================================ */
+export const DIALOGUE = [
+  {
+    id: "dlg_museum", lv: "B2",
+    lines: [
+      { sp: "A", t: "I was thinking of visiting the new art museum this weekend." },
+      { sp: "B", t: "____" },
+      { sp: "A", t: "Great, let's go on Saturday morning then." },
+    ], blankIndex: 1,
+    opts: [
+      "I'm not really interested in art at all.",
+      "That sounds lovely. Which day did you have in mind?",
+      "I've already been there three times.",
+      "Museums are always closed on weekends.",
+    ], ans: 1,
+    tr: "A öneri yapıyor; B'nin yanıtı olumlu olmalı ve A'nın 'Saturday' demesine zemin kurmalı. 2. şık akışı sağlıyor.",
+  },
+  {
+    id: "dlg_doctor", lv: "B2",
+    lines: [
+      { sp: "A", t: "Doctor, I've had a sore throat and a mild fever since yesterday." },
+      { sp: "B", t: "____" },
+      { sp: "A", t: "No, just some tea with honey. I wanted to see you first." },
+    ], blankIndex: 1,
+    opts: [
+      "Have you taken any medication for it so far?",
+      "You should book a holiday to recover.",
+      "I think you need major surgery immediately.",
+      "Sore throats are never caused by infections.",
+    ], ans: 0,
+    tr: "B doktor; A 'No, just some tea… I wanted to see you first' diyor → B ilaç alıp almadığını sormuş olmalı. 1. şık akışı kurar.",
+  },
+  {
+    id: "dlg_lab", lv: "C1",
+    lines: [
+      { sp: "A", t: "Did the experiment confirm your hypothesis?" },
+      { sp: "B", t: "____" },
+      { sp: "A", t: "Then we should repeat it with a larger sample." },
+    ], blankIndex: 1,
+    opts: [
+      "Yes, the results were exactly what we expected.",
+      "Not quite; the results were inconclusive this time.",
+      "I have never worked in a laboratory before.",
+      "The cafeteria was closed during the experiment.",
+    ], ans: 1,
+    tr: "A 'Then we should repeat it with a larger sample' diyor → tekrar gerektiren belirsiz bir sonuç olmalı. 2. şık (sonuç kesin değil) tekrarı gerektirir.",
+  },
+  {
+    id: "dlg_library", lv: "B2",
+    lines: [
+      { sp: "A", t: "Excuse me, could you tell me where I can find books on ancient history?" },
+      { sp: "B", t: "____" },
+      { sp: "A", t: "Thank you, I'll go up there now." },
+    ], blankIndex: 1,
+    opts: [
+      "Sorry, we don't sell any books here.",
+      "I'm afraid history is a very boring subject.",
+      "They're on the second floor, in the history section.",
+      "You should ask at the train station instead.",
+    ], ans: 2,
+    tr: "A yer soruyor ve 'I'll go up there now' diyor → B konum tarif etmeli. 3. şık katı/bölümü verir.",
+  },
+  {
+    id: "dlg_environment", lv: "C1",
+    lines: [
+      { sp: "A", t: "Our city is finally introducing a recycling programme next month." },
+      { sp: "B", t: "____" },
+      { sp: "A", t: "Exactly, and it should also cut down on landfill waste." },
+    ], blankIndex: 1,
+    opts: [
+      "That's a waste of time; nothing will change.",
+      "That's great news. It could really raise awareness among residents.",
+      "I don't think our city has any rubbish at all.",
+      "Recycling has nothing to do with the environment.",
+    ], ans: 1,
+    tr: "A 'Exactly, and it should also cut down on landfill waste' diyerek B'yi onaylıyor → B olumlu ve konuyla ilgili olmalı. 2. şık akışı sağlar.",
+  },
+  {
+    id: "dlg_interview", lv: "C1",
+    lines: [
+      { sp: "A", t: "Why do you think you're the right candidate for this position?" },
+      { sp: "B", t: "____" },
+      { sp: "A", t: "That's impressive. Your experience seems to fit our needs well." },
+    ], blankIndex: 1,
+    opts: [
+      "Honestly, I have no relevant skills at all.",
+      "I'd rather not talk about my work experience.",
+      "I applied here only because I needed any job.",
+      "Because I've led similar projects and consistently met tight deadlines.",
+    ], ans: 3,
+    tr: "A 'Your experience seems to fit our needs well' diyor → B deneyim/uygunluk vurgulamalı. 4. şık güçlü gerekçe sunar.",
+  },
+];
+
+/* ============================================================
+   PARACOMP — paragraph completion (YDS).
+   A sentence is missing, marked with ---- (start/middle/end);
+   pick the missing sentence. Reuses MCQRunner.
+   Mergeable from content.json (data.paracomp).
+   Schema: { id, lv, text (with "----"), opts, ans, tr }
+   ans starts at 0; tr = short Turkish rationale.
+============================================================ */
+export const PARACOMP = [
+  {
+    id: "pc_sleep", lv: "B2",
+    text: "Sleep plays a vital role in good health. ---- During deep sleep, the body repairs tissues and strengthens the immune system. Without enough rest, both physical and mental performance decline.",
+    opts: [
+      "However, many people enjoy staying up late.",
+      "It allows the brain and body to recover from the day's activities.",
+      "Coffee is a popular drink around the world.",
+      "Exercise should be done early in the morning.",
+    ], ans: 1,
+    tr: "---- yeri uykunun işlevini açıklayan bir cümle bekliyor; 2. şık öncesi/sonrasıyla tutarlı.",
+  },
+  {
+    id: "pc_photosynthesis", lv: "B2",
+    text: "---- During this process, they take in carbon dioxide and release oxygen into the air. This exchange is essential for the survival of most living things.",
+    opts: [
+      "Photosynthesis is the process by which green plants produce their own food using sunlight.",
+      "Many animals sleep for most of the day.",
+      "The price of vegetables has risen recently.",
+      "Deserts receive very little rainfall each year.",
+    ], ans: 0,
+    tr: "Paragraf fotosentezi anlatıyor; baştaki ---- konuyu tanıtan cümle ister. 1. şık süreci tanıtır.",
+  },
+  {
+    id: "pc_vaccine", lv: "C1",
+    text: "Vaccines work by training the immune system to recognise a specific pathogen. They contain harmless parts of the germ, which prompt the body to produce antibodies. ----",
+    opts: [
+      "However, most people dislike going to the dentist.",
+      "Mountains are formed over millions of years.",
+      "As a result, the body can respond quickly if it meets the real pathogen later.",
+      "The library closes at nine o'clock every evening.",
+    ], ans: 2,
+    tr: "Önceki cümleler antikor üretimini anlatıyor; sondaki ---- bunun sonucunu bağlamalı. 3. şık 'As a result…' ile sonucu verir.",
+  },
+  {
+    id: "pc_internet", lv: "B2",
+    text: "The internet has transformed the way people communicate. ---- Today, a message can reach the other side of the world in seconds. Still, some worry that face-to-face contact is being lost.",
+    opts: [
+      "Bananas are a good source of potassium.",
+      "The Great Wall of China is very long.",
+      "Most cats sleep for many hours a day.",
+      "In the past, letters could take weeks to arrive.",
+    ], ans: 3,
+    tr: "Ortadaki ---- 'Today, a message…' ile karşılaştırma kuruyor; geçmişe gönderme yapan 4. şık tutarlı.",
+  },
+  {
+    id: "pc_climate", lv: "C1",
+    text: "Climate change is already affecting ecosystems around the globe. ---- For instance, warmer seas are pushing many fish species towards cooler waters. Such shifts can disrupt both food chains and local fishing industries.",
+    opts: [
+      "Chess is a game that requires deep concentration.",
+      "Rising temperatures are altering where plants and animals can live.",
+      "Many tourists enjoy visiting historical castles.",
+      "Breakfast is often called the most important meal.",
+    ], ans: 1,
+    tr: "---- ardından 'For instance, warmer seas…' örneği geliyor → öncesinde genel bir iddia olmalı. 2. şık sıcaklığın canlı dağılımını değiştirdiğini söyler.",
+  },
+  {
+    id: "pc_exercise", lv: "C1",
+    text: "Regular physical exercise offers a wide range of benefits. It strengthens the heart, improves mood, and helps control body weight. ----",
+    opts: [
+      "For these reasons, doctors encourage people to stay active throughout their lives.",
+      "Nevertheless, the moon orbits the Earth roughly every month.",
+      "Some novels are far too long to finish quickly.",
+      "Glass is made mainly from sand at high temperatures.",
+    ], ans: 0,
+    tr: "Paragraf egzersizin yararlarını sıralıyor; sondaki ---- toparlayan bir sonuç ister. 1. şık 'For these reasons…' ile özetler.",
+  },
+];
+
+/* ============================================================
+   TRANSLATE — best translation (YDS).
+   A source sentence (EN or TR) + 4 translations; pick the best.
+   dir: "en2tr" | "tr2en". Reuses MCQRunner.
+   Mergeable from content.json (data.translate).
+   Schema: { id, lv, dir, source, opts, ans, tr }
+   ans starts at 0; tr = short Turkish rationale.
+============================================================ */
+export const TRANSLATE = [
+  {
+    id: "tr_emissions", lv: "B2", dir: "en2tr",
+    source: "The government introduced new measures to reduce carbon emissions.",
+    opts: [
+      "Hükümet karbon emisyonlarını artırmak için yeni önlemler aldı.",
+      "Hükümet karbon emisyonlarını azaltmak için yeni önlemler aldı.",
+      "Hükümet yeni önlemleri karbon emisyonları yüzünden kaldırdı.",
+      "Yeni önlemler karbon emisyonlarını hükümete bildirdi.",
+    ], ans: 1,
+    tr: "'reduce carbon emissions' = azaltmak; 2. şık doğru, 1. şık anlamı tersine çeviriyor.",
+  },
+  {
+    id: "tr_research", lv: "B2", dir: "en2tr",
+    source: "Scientists have discovered a new species of frog in the rainforest.",
+    opts: [
+      "Bilim insanları yağmur ormanında yeni bir kurbağa türü keşfetti.",
+      "Bilim insanları yağmur ormanında bir kurbağa türünü yok etti.",
+      "Yeni bir kurbağa türü bilim insanlarını ormanda buldu.",
+      "Bilim insanları ormanda eski bir kurbağa türü aradı.",
+    ], ans: 0,
+    tr: "'discovered a new species' = yeni bir tür keşfetti; 1. şık doğru, 2. şık 'yok etti' ile anlamı bozar.",
+  },
+  {
+    id: "tr_health", lv: "B2", dir: "en2tr",
+    source: "Doctors recommend drinking plenty of water during hot weather.",
+    opts: [
+      "Doktorlar sıcak havalarda su içmemeyi önerir.",
+      "Sıcak hava doktorlara bol su getirir.",
+      "Doktorlar sıcak havalarda bol su içmeyi önerir.",
+      "Doktorlar soğuk havalarda az su içmeyi önerir.",
+    ], ans: 2,
+    tr: "'recommend drinking plenty of water during hot weather' = sıcak havada bol su içmeyi önerir; 3. şık doğru.",
+  },
+  {
+    id: "tr_history", lv: "C1", dir: "tr2en",
+    source: "Bu antik kent, yüzyıllar boyunca önemli bir ticaret merkezi olmuştur.",
+    opts: [
+      "This ancient city has remained an important trade centre for centuries.",
+      "This modern city will become a trade centre in a few years.",
+      "This ancient city destroyed many trade centres over the centuries.",
+      "Trade centres built this ancient city within a century.",
+    ], ans: 0,
+    tr: "'yüzyıllar boyunca önemli bir ticaret merkezi olmuştur' = has remained an important trade centre for centuries; 1. şık doğru.",
+  },
+  {
+    id: "tr_economy", lv: "C1", dir: "tr2en",
+    source: "Hükümet, işsizliği azaltmak için yeni iş olanakları yaratmayı amaçlıyor.",
+    opts: [
+      "The government plans to increase unemployment by cutting jobs.",
+      "The government aims to create new job opportunities to reduce unemployment.",
+      "New job opportunities forced the government to resign.",
+      "The government reduced job opportunities to raise unemployment.",
+    ], ans: 1,
+    tr: "'işsizliği azaltmak için yeni iş olanakları yaratmayı amaçlıyor' = aims to create new jobs to reduce unemployment; 2. şık doğru.",
+  },
+  {
+    id: "tr_biology", lv: "B2", dir: "en2tr",
+    source: "The human brain uses a large amount of energy even during rest.",
+    opts: [
+      "İnsan beyni yalnızca uyurken enerji kullanır.",
+      "İnsan vücudu dinlenirken hiç enerji harcamaz.",
+      "Enerji, insan beynini dinlenmeye zorlar.",
+      "İnsan beyni dinlenirken bile büyük miktarda enerji kullanır.",
+    ], ans: 3,
+    tr: "'even during rest' = dinlenirken bile; 4. şık doğru, 1. şık 'yalnızca uyurken' ile anlamı daraltır.",
   },
 ];
