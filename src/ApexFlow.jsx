@@ -10,7 +10,7 @@ import {
   TopHUD, Catalog, Placement, VocabReview, GrammarHub,
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
   SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, OddoutRoom,
-  DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, FocusBar,
+  DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, MockRoom, FocusBar,
 } from "./modules.jsx";
 
 export default function ApexFlow() {
@@ -61,7 +61,14 @@ export default function ApexFlow() {
     return () => document.removeEventListener("visibilitychange", onHide);
   }, [focus]);
   function startFocus(min) { setDistractions(0); setNowTs(Date.now()); setFocus({ startedAt: Date.now(), endsAt: Date.now() + min * 60000, durationMin: min }); }
-  function endFocus() { setFocus(null); setDistractions(0); }
+  function endFocus() {
+    if (focus) {
+      const elapsedMin = Math.floor((Date.now() - focus.startedAt) / 60000);
+      const credited = Math.min(focus.durationMin, Math.max(0, elapsedMin));
+      if (credited > 0) store.addFocusMinutes(credited);
+    }
+    setFocus(null); setDistractions(0);
+  }
   const remainingMs = focus ? focus.endsAt - nowTs : 0;
 
   // module-facing award(points, isCorrect): keeps the original 2-arg contract,
@@ -107,39 +114,43 @@ export default function ApexFlow() {
 
   const themeCls = state.settings.theme === "light" ? "is-light " : "";
   const level = ctx.level || state.level;
+  const isMock = view === "mock";
 
   return (
-    <div className={"af-root " + themeCls + (flow ? "af-flow " : "") + (flash ? "af-flash-" + flash : "")}>
+    <div className={"af-root " + themeCls + (flow ? "af-flow " : "") + (flash ? "af-flash-" + flash : "") + (isMock ? "af-mockmode " : "")}>
       <Styles />
       <div className="af-bg" />
       <div className="af-scan" />
 
-      <TopHUD xp={state.xp} combo={combo} maxCombo={maxCombo} flow={flow} lastGain={lastGain} onReset={resetSession} />
-      {focus ? <FocusBar remainingMs={remainingMs} distractions={distractions} durationMin={focus.durationMin} onEnd={endFocus} /> : null}
+      {!isMock ? <TopHUD xp={state.xp} combo={combo} maxCombo={maxCombo} flow={flow} lastGain={lastGain} onReset={resetSession} /> : null}
+      {!isMock && focus ? <FocusBar remainingMs={remainingMs} distractions={distractions} durationMin={focus.durationMin} onEnd={endFocus} /> : null}
 
       <div className="af-stage">
         {view === "catalog" && <Catalog store={store} go={go} content={{ msg: contentMsg, reload: reloadContent }} onFocus={startFocus} />}
         {view === "vocab" && <VocabReview store={store} onBack={home} />}
         {view === "grammar" && <GrammarHub level={level} store={store} award={award} onBack={home} />}
         {view === "listening" && <ListeningRoom level={level} store={store} award={award} onBack={home} />}
-        {view === "articles" && <ArticleRoom level={level} store={store} award={award} onBack={home} />}
-        {view === "cloze" && <ClozeRoom level={level} store={store} award={award} onBack={home} />}
-        {view === "restate" && <RestateRoom level={level} store={store} award={award} onBack={home} />}
-        {view === "oddout" && <OddoutRoom level={level} store={store} award={award} onBack={home} />}
-        {view === "dialogue" && <DialogueRoom level={level} store={store} award={award} onBack={home} />}
-        {view === "paracomp" && <ParacompRoom level={level} store={store} award={award} onBack={home} />}
-        {view === "translate" && <TranslateRoom level={level} store={store} award={award} onBack={home} />}
+        {view === "articles" && <ArticleRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
+        {view === "cloze" && <ClozeRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
+        {view === "restate" && <RestateRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
+        {view === "oddout" && <OddoutRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
+        {view === "dialogue" && <DialogueRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
+        {view === "paracomp" && <ParacompRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
+        {view === "translate" && <TranslateRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
         {view === "toeflint" && <ToeflIntegratedRoom level={level} store={store} award={award} onBack={home} />}
         {view === "writing" && <WritingStudio level={level} store={store} award={award} onBack={home} />}
         {view === "reading" && <ReadingMatrix onBack={home} award={award} />}
         {view === "lexical" && <LexicalArena onBack={home} award={award} />}
         {view === "syntax" && <SyntaxForge onBack={home} award={award} />}
         {view === "speaking" && <PressureCooker onBack={home} award={award} />}
+        {view === "mock" && <MockRoom level={level} store={store} onBack={home} />}
       </div>
 
-      <div className="af-foot">
-        ApexFlow · seviye {state.level} · pratik amaçlıdır, band/TOEFL değerleri yaklaşıktır · ilerlemen bu cihazda kayıtlı
-      </div>
+      {!isMock ? (
+        <div className="af-foot">
+          ApexFlow · seviye {state.level} · pratik amaçlıdır, band/TOEFL değerleri yaklaşıktır · ilerlemen bu cihazda kayıtlı
+        </div>
+      ) : null}
     </div>
   );
 }

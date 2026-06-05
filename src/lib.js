@@ -31,6 +31,8 @@ function defaultState() {
     streak: { count: 0, last: null },   // last = "YYYY-MM-DD"
     srs: {},                // cardId -> { reps, interval, ease, due }
     done: {},               // "grammar:g_tobe" -> true, etc.
+    stats: {},              // questionType -> { c: correctCount, t: totalCount }  (Gelişim Raporu)
+    focusMinutes: 0,        // cumulative completed focus-mode minutes
     daily: { date: null, vocab: 0, xp: 0, grammar: 0, listening: 0, writing: 0 },
     settings: { sound: true, rate: 0.95, apiKey: "", theme: "dark", contentUrl: "" },
   };
@@ -46,7 +48,8 @@ function loadState() {
       streak: { ...defaultState().streak, ...(parsed.streak || {}) },
       settings: { ...defaultState().settings, ...(parsed.settings || {}) },
       daily: { ...defaultState().daily, ...(parsed.daily || {}) },
-      srs: parsed.srs || {}, done: parsed.done || {} };
+      srs: parsed.srs || {}, done: parsed.done || {},
+      stats: parsed.stats || {}, focusMinutes: parsed.focusMinutes || 0 };
   } catch { return defaultState(); }
 }
 
@@ -189,12 +192,26 @@ export function useStore() {
 
   const markDone = useCallback((key) => update((s) => ({ ...s, done: { ...s.done, [key]: true } })), [update]);
 
+  // per-question-type accuracy tally (defensive on s.stats); feeds Gelişim Raporu
+  const recordStat = useCallback((type, isCorrect) => update((s) => {
+    const stats = s.stats || {};
+    const prev = stats[type] || { c: 0, t: 0 };
+    return { ...s, stats: { ...stats, [type]: { c: prev.c + (isCorrect ? 1 : 0), t: prev.t + 1 } } };
+  }), [update]);
+
+  // add completed focus minutes (defensive on s.focusMinutes)
+  const addFocusMinutes = useCallback((min) => update((s) => {
+    const m = Math.max(0, Math.floor(min || 0));
+    if (!m) return s;
+    return { ...s, focusMinutes: (s.focusMinutes || 0) + m };
+  }), [update]);
+
   const setSetting = useCallback((k, v) =>
     update((s) => ({ ...s, settings: { ...s.settings, [k]: v } })), [update]);
 
   const resetProgress = useCallback(() => setState(defaultState()), []);
 
-  return { state, touchStreak, award, bumpDaily, setLevel, gradeCard, markDone, setSetting, resetProgress };
+  return { state, touchStreak, award, bumpDaily, setLevel, gradeCard, markDone, recordStat, addFocusMinutes, setSetting, resetProgress };
 }
 
 /* ============================================================
