@@ -5,13 +5,13 @@ import {
   Scan, Gauge, TrendingUp, Lightbulb, Home as HomeIcon, ChevronLeft,
   Crosshair, Sparkles, Volume2, RefreshCw, GraduationCap, PenLine,
   ListChecks, Languages, BookMarked, Headphones, Repeat, Star, Lock,
-  ChevronRight, RotateCw, Trophy, Pause, Sun, Moon,
+  ChevronRight, RotateCw, Trophy, Pause, Sun, Moon, FileText,
 } from "lucide-react";
 import { tierFor, speak, stopSpeak, speechSupported, reviewQueue, analyzeWriting, scoreWithAI } from "./lib.js";
 import {
   LEXICAL, PASSAGES, SYNTAX, SPEAKING,
   LEVELS, LV_ORDER, lvIndex, levelMeta,
-  PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES,
+  PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES, CLOZE,
   EXAMS, MODULE_INFO,
 } from "./catalog.js";
 
@@ -848,7 +848,7 @@ const MODULE_ICON = {
   vocab: <Repeat size={20} />, grammar: <GraduationCap size={20} />,
   listening: <Headphones size={20} />, articles: <BookMarked size={20} />, reading: <BookOpen size={20} />,
   lexical: <Crosshair size={20} />, syntax: <Hammer size={20} />,
-  speaking: <Mic size={20} />, writing: <PenLine size={20} />,
+  speaking: <Mic size={20} />, writing: <PenLine size={20} />, cloze: <FileText size={20} />,
 };
 function ModuleCard({ k, ctx, go, done }) {
   const info = MODULE_INFO[k];
@@ -1617,6 +1617,88 @@ function ArticleItem({ item, store, award, onBack }) {
             <div className="af-result-cap">OKUMA TAMAM</div>
             <div className="af-result-lv">{score}/{item.items.length}</div>
             <p className="af-result-blurb">Yanlışların varsa metne dönüp ilgili yeri tekrar okuyabilirsin.</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>Diğer parçalar <ArrowRight size={16} /></button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+
+/* ============================================================
+   CLOZE  (gap-fill: academic passage + numbered blanks)
+   Same shape as ARTICLES; blanks reuse the shared MCQRunner.
+============================================================ */
+export function ClozeRoom({ level, store, award, onBack }) {
+  const [open, setOpen] = useState(null);
+  const items = useMemo(() => {
+    const f = CLOZE.filter((c) => !level || lvIndex(c.lv) <= lvIndex(level));
+    return f.length ? f : CLOZE;
+  }, [level]);
+  if (open) return <ClozeItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
+  return (
+    <>
+      <ModuleBar title="Boşluk Doldurma" sub="YDS/YÖKDİL cloze" onBack={onBack} />
+      <div className="af-substage">
+        {CLOZE.length === 0 ? (
+          <div className="af-empty"><AlertTriangle size={14} /> Henüz cloze parçası yok — içerik kaynağından (content.json) eklenebilir.</div>
+        ) : null}
+        <div className="af-grid">
+          {items.map((c) => {
+            const done = !!store.state.done["cloze:" + c.id];
+            return (
+              <button key={c.id} className="af-card" onClick={() => setOpen(c)}>
+                <div className="af-card-top">
+                  <span className="af-card-icon af-ic-cloze"><FileText size={20} /></span>
+                  <span className="af-card-tag">{c.lv}</span>
+                </div>
+                <div className="af-card-name">{c.title}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
+                <div className="af-card-desc">{c.blanks.length} boşluk</div>
+                <div className="af-card-go">BAŞLA <ArrowRight size={15} /></div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+function ClozeItem({ item, store, award, onBack }) {
+  const [phase, setPhase] = useState("read"); // read -> quiz -> done
+  const [score, setScore] = useState(0);
+  const paras = item.text.split(/\n\s*\n/);
+  const quizItems = useMemo(
+    () => item.blanks.map((b) => ({
+      q: "(" + b.n + ") numaralı boşluğa hangi seçenek gelmeli?",
+      opts: b.opts, ans: b.ans, tr: b.tr,
+    })),
+    [item]
+  );
+  const passage = (
+    <div className="af-cloze-ref">
+      {paras.map((para, idx) => <p key={idx} className="af-cloze-p">{para}</p>)}
+    </div>
+  );
+  return (
+    <>
+      <ModuleBar title={item.title} sub={"Cloze · " + item.lv} onBack={onBack} />
+      <div className="af-substage">
+        {phase === "read" ? (
+          <div className="af-cloze">
+            <p className="af-cloze-hint">Paragrafı oku; numaralı boşlukları (1)(2)… sonra sırayla dolduracaksın.</p>
+            {passage}
+            <button className="af-q-next" onClick={() => setPhase("quiz")}>Boşluklara geç <ArrowRight size={15} /></button>
+          </div>
+        ) : phase === "quiz" ? (
+          <MCQRunner items={quizItems} award={award} points={16}
+            footer={passage}
+            onFinish={(ok) => { setScore(ok); store.markDone("cloze:" + item.id); store.touchStreak(); setPhase("done"); }} />
+        ) : (
+          <div className="af-result">
+            <div className="af-result-cap">CLOZE TAMAM</div>
+            <div className="af-result-lv">{score}/{item.blanks.length}</div>
+            <p className="af-result-blurb">Yanlışların varsa paragrafa dönüp boşluğun çevresindeki ipuçlarını tekrar oku.</p>
             <button className="af-q-next af-result-go" onClick={onBack}>Diğer parçalar <ArrowRight size={16} /></button>
           </div>
         )}

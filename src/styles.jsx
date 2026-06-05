@@ -617,6 +617,15 @@ export function Styles() {
 .af-card-icon.af-ic-articles{color:#2dd4bf;background:rgba(45,212,191,.12);}
 .af-article{max-width:680px;margin:0 auto;}
 .af-article-p{color:var(--txt);font-size:16px;line-height:1.8;font-family:var(--serif);margin:0 0 15px;}
+
+/* ===== cloze (gap-fill) ===== */
+.af-card-icon.af-ic-cloze{color:#c084fc;background:rgba(192,132,252,.12);}
+.af-cloze{max-width:680px;margin:0 auto;}
+.af-cloze-hint{color:var(--txt2);font-size:12.5px;font-family:var(--mono);margin:0 0 12px;}
+.af-cloze-ref{max-width:680px;margin:0 auto;}
+.af-cloze-p{color:var(--txt);font-size:16px;line-height:1.9;font-family:var(--serif);margin:0 0 14px;}
+.af-mcq .af-cloze-ref{margin-top:18px;padding-top:14px;border-top:1px solid var(--line2);}
+.af-mcq .af-cloze-p{font-size:14.5px;line-height:1.8;color:var(--txt2);}
 .af-content-foot{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;}
 .af-content-reload{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line2);color:var(--txt2);border-radius:8px;padding:5px 10px;font-size:11.5px;cursor:pointer;font-family:var(--mono);}
 .af-content-reload:hover{border-color:var(--em-d);color:var(--em-b);}

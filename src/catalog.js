@@ -709,14 +709,14 @@ export const EXAMS = [
     skills: ["Reading", "Listening", "Speaking", "Writing"],
     blurb: "Akademik dört beceri; bütünleşik (integrated) konuşma ve yazma görevleri.",
     modules: ["reading", "listening", "speaking", "writing", "lexical"] },
-  { id: "YDS", name: "YDS / e-YDS", status: "soon", scoring: "0–100 · 80 soru",
+  { id: "YDS", name: "YDS / e-YDS", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Çeviri", "Okuma"],
     blurb: "Tamamen çoktan seçmeli — konuşma/yazma/dinleme YOK. Kelime, gramer, cloze, çeviri (TR↔EN), paragraf tamamlama, anlamca en yakın cümle, akışı bozan cümle, diyalog tamamlama.",
-    modules: ["grammar", "lexical"] },
-  { id: "YOKDIL", name: "YÖKDİL (Fen · Sağlık · Sosyal)", status: "soon", scoring: "0–100 · 80 soru",
+    modules: ["cloze", "grammar", "lexical", "articles"] },
+  { id: "YOKDIL", name: "YÖKDİL (Fen · Sağlık · Sosyal)", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Okuma"],
     blurb: "YDS formatına benzer; alanına göre (Fen, Sağlık, Sosyal) terim ağırlıklı. Akademik personel ve TUS/DUS dil şartı için de kullanılır.",
-    modules: ["grammar", "lexical"] },
+    modules: ["cloze", "grammar", "lexical", "articles"] },
   { id: "GENEL", name: "Sıfırdan İngilizce", status: "active", scoring: "CEFR A1→C2",
     skills: ["Gramer", "Kelime", "Dinleme", "Okuma"],
     blurb: "Sınavdan bağımsız temel. Seviye testiyle başla; A1’den ilerle ya da eksik temelini kapat.",
@@ -729,6 +729,7 @@ export const MODULE_INFO = {
   grammar:  { name: "Gramer Atölyesi", sub: "seviye seviye dilbilgisi", minLv: "A1" },
   listening:{ name: "Dinleme Odası", sub: "sesli metin + sorular", minLv: "A2" },
   articles: { name: "Okuma Parçaları", sub: "makale + sorular (kolay format)", minLv: "A2" },
+  cloze:    { name: "Boşluk Doldurma", sub: "YDS/YÖKDİL cloze", minLv: "B2" },
   reading:  { name: "Deductive Reading Matrix", sub: "T/F/NG · başlık · X-Ray", minLv: "B2" },
   lexical:  { name: "Lexical Arena", sub: "süreli eşanlam atışı", minLv: "B2" },
   syntax:   { name: "Syntax Forge", sub: "cümle kurma · Writing", minLv: "B2" },
@@ -785,6 +786,53 @@ export const ARTICLES = [
       { q: "What is Mayor's central proposal?", opts: ["Griffins still exist today", "Nomads reconstructed Protoceratops fossils as a living creature", "The Greeks invented dinosaurs", "Gold deposits attract eagles"], ans: 1, tr: "Mayor: göçebeler çöldeki Protoceratops kemiklerini görüp yaşayan bir yaratık olarak yeniden kurmuş olabilir." },
       { q: "What objection do critics raise?", opts: ["The fossils are fake", "The griffin appears in art before some supposed encounters", "Mayor never published her work", "Deserts contain no fossils"], ans: 1 },
       { q: "What does the author say remains valuable?", opts: ["Proving griffins were real", "The question of how nature, when misread, shapes legend", "Selling desert gold", "Ignoring all myths"], ans: 1 },
+    ],
+  },
+];
+
+/* ============================================================
+   CLOZE — gap-fill (YDS/YÖKDİL style).
+   Short academic passage with numbered blanks (1),(2)… ;
+   each blank has 4 options. Same authoring format as ARTICLES,
+   also mergeable from content.json (data.cloze).
+   Schema: { id, lv, title, text, blanks:[{ n, opts, ans, tr }] }
+   ans starts at 0; tr = short Turkish rationale per blank.
+============================================================ */
+export const CLOZE = [
+  {
+    id: "cloze_renewables", lv: "B2", title: "Renewable Energy",
+    text:
+      "Renewable energy now plays a central role in plans to cut carbon emissions. (1) ____ the cost of solar panels has fallen sharply, many households still hesitate to install them. Wind power, (2) ____, has expanded rapidly, and in some countries it already supplies a large share of electricity. Engineers continue to improve battery storage, (3) ____ allows surplus power to be saved for later use. (4) ____ these advances, fossil fuels remain dominant in global energy markets. Governments will need stronger policies (5) ____ the transition is to accelerate.",
+    blanks: [
+      { n: 1, opts: ["Although", "Because", "Whether", "Unless"], ans: 0, tr: "Although = -e rağmen; maliyet düşmesine rağmen tereddüt → zıtlık bağlacı." },
+      { n: 2, opts: ["by contrast", "for example", "in short", "as a result"], ans: 0, tr: "by contrast = buna karşılık; güneşteki tereddütle rüzgârın hızlı yayılması tezat oluşturur." },
+      { n: 3, opts: ["who", "which", "where", "what"], ans: 1, tr: "which = cansız bir şeyi (battery storage) niteleyen ilgi zamiri." },
+      { n: 4, opts: ["Despite", "Thanks to", "Instead of", "According to"], ans: 0, tr: "Despite = -e rağmen; ilerlemelere rağmen fosil yakıtlar baskın." },
+      { n: 5, opts: ["if", "so", "but", "or"], ans: 0, tr: "if = eğer; ‘geçiş hızlanacaksa’ koşul cümlesi kurar." },
+    ],
+  },
+  {
+    id: "cloze_immune", lv: "C1", title: "The Immune System",
+    text:
+      "The human immune system defends the body against a constant stream of pathogens. When a virus enters the bloodstream, specialised cells (1) ____ it as foreign and begin to respond. Some of these cells produce antibodies, (2) ____ bind to the invader and mark it for destruction. (3) ____ the threat has been cleared, a small population of memory cells remains. (4) ____ these cells, the body can react far more quickly if the same pathogen returns. This principle (5) ____ the basis of modern vaccination.",
+    blanks: [
+      { n: 1, opts: ["recognise", "resemble", "conceal", "ignore"], ans: 0, tr: "recognise = tanımak; hücreler virüsü yabancı olarak tanır." },
+      { n: 2, opts: ["which", "whose", "where", "who"], ans: 0, tr: "which = antikorları (cansız) niteleyen ilgi zamiri." },
+      { n: 3, opts: ["Once", "Unless", "Whereas", "Although"], ans: 0, tr: "Once = -dığında; tehdit temizlendiğinde bellek hücreleri kalır." },
+      { n: 4, opts: ["Thanks to", "Instead of", "Regardless of", "In spite of"], ans: 0, tr: "Thanks to = sayesinde; bu hücreler sayesinde vücut hızlı tepki verir." },
+      { n: 5, opts: ["forms", "forgets", "forces", "forbids"], ans: 0, tr: "form the basis = temelini oluşturur; aşılamanın temelini oluşturur." },
+    ],
+  },
+  {
+    id: "cloze_urban", lv: "B2", title: "Life in Cities",
+    text:
+      "More than half of the world's population now lives in cities, and that share keeps rising. People move to urban areas (1) ____ they offer jobs, schools, and healthcare. (2) ____, rapid growth brings serious problems, such as traffic, pollution, and a shortage of affordable housing. Planners argue that public transport must be improved (3) ____ reduce congestion. (4) ____ well-designed parks and squares, residents have few places to relax. Many experts believe that the cities of the future will only succeed (5) ____ they balance growth with quality of life.",
+    blanks: [
+      { n: 1, opts: ["because", "although", "unless", "whereas"], ans: 0, tr: "because = çünkü; şehirler iş/okul sunduğu için taşınılır (neden)." },
+      { n: 2, opts: ["However", "Therefore", "For instance", "Meanwhile"], ans: 0, tr: "However = ancak; fırsatların ardından sorunları getirir → zıtlık." },
+      { n: 3, opts: ["to", "for", "by", "of"], ans: 0, tr: "to + fiil = amaç bildirir; ‘tıkanıklığı azaltmak için’." },
+      { n: 4, opts: ["Without", "With", "Besides", "Despite"], ans: 0, tr: "Without = -sız; iyi park olmadan dinlenecek yer az kalır." },
+      { n: 5, opts: ["if", "so", "then", "or"], ans: 0, tr: "if = eğer; ‘büyümeyi yaşam kalitesiyle dengelerlerse’ koşulu." },
     ],
   },
 ];
