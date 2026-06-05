@@ -13,7 +13,7 @@ import {
   LEXICAL, PASSAGES, SYNTAX, SPEAKING,
   LEVELS, LV_ORDER, lvIndex, levelMeta,
   PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES, CLOZE, RESTATE, ODDOUT,
-  DIALOGUE, PARACOMP, TRANSLATE,
+  DIALOGUE, PARACOMP, TRANSLATE, TOEFL_INTEGRATED,
   EXAMS, MODULE_INFO,
 } from "./catalog.js";
 
@@ -853,6 +853,7 @@ const MODULE_ICON = {
   speaking: <Mic size={20} />, writing: <PenLine size={20} />, cloze: <FileText size={20} />,
   restate: <Replace size={20} />, oddout: <Filter size={20} />,
   dialogue: <MessageSquare size={20} />, paracomp: <AlignLeft size={20} />, translate: <LanguagesIcon size={20} />,
+  toeflint: <Layers size={20} />,
 };
 function ModuleCard({ k, ctx, go, done }) {
   const info = MODULE_INFO[k];
@@ -1935,6 +1936,263 @@ export function TranslateRoom({ level, store, award, onBack }) {
     quizItems={quizItems} items={items} prefix="translate" doneCap="ÇEVİRİ TAMAM"
     store={store} onBack={onBack} award={award}
     hint={<div className="af-restate-hint"><LanguagesIcon size={13} /> Anlamı en doğru veren çeviriyi seç.</div>} />;
+}
+
+
+/* ============================================================
+   TOEFL INTEGRATED  (multi-stage simulator)
+   read (3:00) -> listen (lecture TTS) -> respond (write/speak)
+   -> AI 0-30 score (reuses speak / scoreWithAI / analyzeWriting).
+============================================================ */
+// soft per-phase countdown: counts down to 0 and stops; never blocks.
+function useTimer(totalSec, running) {
+  const [left, setLeft] = useState(totalSec);
+  useEffect(() => { setLeft(totalSec); }, [totalSec, running]);
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => setLeft((l) => (l > 0 ? l - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, [running]);
+  return left;
+}
+const mmss = (s) => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+function extractScore(txt) {
+  if (!txt) return null;
+  let m = txt.match(/(\d{1,2})\s*\/\s*30/);
+  if (m) return Math.min(30, parseInt(m[1], 10));
+  m = txt.match(/puan[^0-9]{0,12}(\d{1,2})/i);
+  if (m) return Math.min(30, parseInt(m[1], 10));
+  return null;
+}
+
+export function ToeflIntegratedRoom({ level, store, award, onBack }) {
+  const [open, setOpen] = useState(null);
+  const items = useMemo(() => {
+    const f = TOEFL_INTEGRATED.filter((t) => !level || lvIndex(t.lv) <= lvIndex(level));
+    return f.length ? f : TOEFL_INTEGRATED;
+  }, [level]);
+  if (open) return <ToeflIntegratedItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
+  return (
+    <>
+      <ModuleBar title="TOEFL Integrated" sub="oku → dinle → yaz/konuş" onBack={onBack} />
+      <div className="af-substage">
+        {TOEFL_INTEGRATED.length === 0 ? (
+          <div className="af-empty"><AlertTriangle size={14} /> Henüz görev yok — içerik kaynağından (content.json) eklenebilir.</div>
+        ) : null}
+        <div className="af-grid">
+          {items.map((t) => {
+            const done = !!store.state.done["toeflint:" + t.id];
+            return (
+              <button key={t.id} className="af-card" onClick={() => setOpen(t)}>
+                <div className="af-card-top">
+                  <span className="af-card-icon af-ic-toeflint"><Layers size={20} /></span>
+                  <span className="af-card-tag">{t.lv}</span>
+                </div>
+                <div className="af-card-name">{t.reading.title}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
+                <div className="af-card-desc">{t.type === "speaking" ? "Konuşma" : "Yazma"} · {t.topic}</div>
+                <div className="af-card-go">BAŞLA <ArrowRight size={15} /></div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ToeflIntegratedItem({ item, store, award, onBack }) {
+  const isSpeaking = item.type === "speaking";
+  const [phase, setPhase] = useState("read");      // read -> listen -> respond -> done
+  const [spk, setSpk] = useState("idle");          // speaking sub-stage: idle -> prep -> speak -> transcript
+  const [playing, setPlaying] = useState(false);
+  const [showLec, setShowLec] = useState(false);   // fallback reveal of lecture text
+  const [notes, setNotes] = useState("");
+  const [text, setText] = useState("");
+  const [evaluating, setEvaluating] = useState(false);
+  const [err, setErr] = useState(null);
+  const [result, setResult] = useState(null);
+  const soundOn = store.state.settings.sound;
+  const apiKey = store.state.settings.apiKey;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+  useEffect(() => () => stopSpeak(), []);
+
+  // soft countdowns per stage
+  const readLeft = useTimer(180, phase === "read");
+  const writeLeft = useTimer(20 * 60, phase === "respond" && !isSpeaking);
+  const prepLeft = useTimer(item.prep || 20, phase === "respond" && isSpeaking && spk === "prep");
+  const speakLeft = useTimer(item.respond || 60, phase === "respond" && isSpeaking && spk === "speak");
+
+  // auto-advance on zero (soft): reading rolls into listening; prep -> speak -> transcript
+  useEffect(() => { if (phase === "read" && readLeft === 0) { stopSpeak(); setPhase("listen"); } }, [phase, readLeft]);
+  useEffect(() => { if (phase === "respond" && isSpeaking && spk === "prep" && prepLeft === 0) setSpk("speak"); }, [phase, isSpeaking, spk, prepLeft]);
+  useEffect(() => { if (phase === "respond" && isSpeaking && spk === "speak" && speakLeft === 0) setSpk("transcript"); }, [phase, isSpeaking, spk, speakLeft]);
+
+  function playLecture() {
+    if (playing) { stopSpeak(); setPlaying(false); return; }
+    if (!speechSupported() || !soundOn) { setShowLec(true); return; }
+    setPlaying(true);
+    speak(item.lecture.body, { rate: store.state.settings.rate, onend: () => setPlaying(false) });
+  }
+  function goRespond() { stopSpeak(); setPlaying(false); setPhase("respond"); }
+
+  async function evaluate() {
+    if (evaluating) return;
+    const answer = text.trim();
+    if (answer.split(/\s+/).filter(Boolean).length < 5) { setErr("Değerlendirme için biraz daha yaz."); return; }
+    setEvaluating(true); setErr(null);
+    const aiItem = {
+      type: isSpeaking ? "TOEFL Integrated Speaking" : "TOEFL Integrated Writing",
+      exam: ["TOEFL"],
+      prompt:
+        item.prompt +
+        "\n\n[READING PASSAGE]\n" + item.reading.body +
+        "\n\n[LECTURE TRANSCRIPT]\n" + item.lecture.body +
+        "\n\n[Dersin okuma pasajına karşı çıktığı noktalar]\n- " + item.keyPoints.join("\n- ") +
+        "\n\nDeğerlendirme: yanıt dersin üç noktasını kapsıyor mu; bunları okuma pasajındaki ilgili iddialarla doğru biçimde ilişkilendiriyor mu; organizasyon ve dil nasıl? Yanıtının EN BAŞINA 'Puan: X/30' biçiminde bir puan yaz, ardından 2–3 satır Türkçe geri bildirim ver.",
+    };
+    try {
+      let raw, score, offline = false;
+      if (apiKey) {
+        raw = await scoreWithAI({ text: answer, item: aiItem, apiKey });
+        score = extractScore(raw);
+      } else {
+        offline = true;
+        const a = analyzeWriting(answer, { minWords: item.minWords || 150 });
+        score = Math.max(0, Math.min(30, Math.round((parseFloat(a.band) / 8) * 30)));
+        raw = "Çevrimdışı yaklaşık değerlendirme (resmî değil):\n• " + a.notes.join("\n• ") +
+          "\n\nGerçek AI puanı için Ayarlar'dan Anthropic API anahtarı ekle.";
+      }
+      setResult({ score, raw, offline });
+      store.markDone("toeflint:" + item.id);
+      store.touchStreak();
+      award(score && score > 0 ? Math.round(score) : 12, true);
+      setPhase("done");
+    } catch (e) {
+      setErr(e.message || "Değerlendirme başarısız oldu.");
+    } finally { setEvaluating(false); }
+  }
+
+  const readingParas = item.reading.body.split(/\n\s*\n/);
+  const lectureParas = item.lecture.body.split(/\n\s*\n/);
+  const stageSub = phase === "read" ? "1/3 Okuma" : phase === "listen" ? "2/3 Dinleme" : phase === "respond" ? "3/3 Yanıt" : "Sonuç";
+
+  return (
+    <>
+      <ModuleBar title={item.reading.title} sub={"TOEFL Integrated · " + stageSub} onBack={onBack} />
+      <div className="af-substage af-ti">
+
+        {phase === "read" ? (
+          <>
+            <div className="af-ti-bar">
+              <span className="af-ti-step"><BookOpen size={14} /> Okuma — pasajı oku</span>
+              <span className={"af-ti-clock" + (readLeft === 0 ? " is-up" : "")}><Timer size={14} /> {mmss(readLeft)}</span>
+            </div>
+            <div className="af-article">
+              {readingParas.map((p, i) => <p key={i} className="af-article-p">{p}</p>)}
+            </div>
+            <button className="af-q-next" onClick={() => { stopSpeak(); setPhase("listen"); }}>
+              Dinlemeye geç <ArrowRight size={15} />
+            </button>
+          </>
+        ) : phase === "listen" ? (
+          <>
+            <div className="af-ti-bar">
+              <span className="af-ti-step"><Headphones size={14} /> Dinleme — ders pasaja karşı çıkıyor</span>
+            </div>
+            <div className="af-ti-note"><Lightbulb size={13} /> Pasaj artık gizli. Dersi dinle ve aşağıya not al — yanıtında dersin noktalarını kullanacaksın.</div>
+            <div className="af-play">
+              <div className="af-play-row">
+                <button className="af-play-btn" onClick={playLecture}>{playing ? <Pause size={22} /> : <Play size={22} />}</button>
+                <div className="af-play-info">
+                  <div className="af-play-title"><Volume2 size={14} /> {playing ? "oynatılıyor…" : "Dinle"}</div>
+                  <div className="af-play-sub">istediğin kadar tekrar dinleyebilirsin</div>
+                </div>
+              </div>
+              {(!soundOn || !speechSupported()) ? (
+                <button className="af-transcript-toggle" onClick={() => setShowLec((v) => !v)}>
+                  {showLec ? <><EyeOff size={13} /> ders metnini gizle</> : <><Eye size={13} /> ders metnini göster (ses kapalı)</>}
+                </button>
+              ) : null}
+              {showLec ? <div className="af-ti-lecture">{lectureParas.map((p, i) => <p key={i} className="af-article-p">{p}</p>)}</div> : null}
+            </div>
+            <textarea className="af-notes" value={notes} onChange={(e) => setNotes(e.target.value)}
+              placeholder="Not defteri — dersin üç karşı-noktasını yakala (kaydedilmez)" />
+            <button className="af-q-next af-listen-go" onClick={goRespond}>Yanıta geç <ArrowRight size={15} /></button>
+          </>
+        ) : phase === "respond" ? (
+          <>
+            <div className="af-ti-bar">
+              <span className="af-ti-step"><PenLine size={14} /> Yanıt</span>
+              {!isSpeaking ? <span className={"af-ti-clock" + (writeLeft === 0 ? " is-up" : "")}><Timer size={14} /> {mmss(writeLeft)}</span> : null}
+            </div>
+            <div className="af-write-prompt"><span className="af-write-cap">GÖREV</span> {item.prompt}</div>
+
+            {!isSpeaking ? (
+              <>
+                <div className="af-ti-readback">
+                  <div className="af-ti-readback-cap"><BookOpen size={13} /> Okuma pasajı (yazarken görünür)</div>
+                  {readingParas.map((p, i) => <p key={i} className="af-ti-readback-p">{p}</p>)}
+                </div>
+                {writeLeft === 0 ? <div className="af-ti-note"><Timer size={13} /> Süre doldu — yine de yazmayı bitirip değerlendirebilirsin (yumuşak süre).</div> : null}
+                <textarea className="af-write-area" value={text} onChange={(e) => setText(e.target.value)}
+                  placeholder="Dersin noktalarını özetle ve her birinin okumadaki ilgili iddiayı nasıl çürüttüğünü açıkla…" />
+                <div className="af-write-meta">
+                  <span className={words >= (item.minWords || 150) ? "is-ok" : ""}>{words} / {item.minWords || 150} kelime</span>
+                </div>
+              </>
+            ) : (
+              <>
+                {spk === "idle" ? (
+                  <div className="af-ti-speak">
+                    <p className="af-ti-note"><Mic size={13} /> Hazırlık {item.prep || 20} sn, ardından {item.respond || 60} sn konuşma. Yüksek sesle yanıtla; ses kaydı tutulmaz.</p>
+                    <button className="af-q-next" onClick={() => setSpk("prep")}>Hazırlığı başlat <ArrowRight size={15} /></button>
+                  </div>
+                ) : spk === "prep" ? (
+                  <div className="af-ti-speak is-prep">
+                    <div className="af-ti-bigclock"><Timer size={18} /> Hazırlık {mmss(prepLeft)}</div>
+                    <p className="af-ti-note">Notlarına bak, yanıtını planla. Süre dolunca konuşma otomatik başlar.</p>
+                    <button className="af-transcript-toggle" onClick={() => setSpk("speak")}>hemen konuşmaya geç</button>
+                  </div>
+                ) : spk === "speak" ? (
+                  <div className="af-ti-speak is-live">
+                    <div className="af-ti-bigclock is-live"><Mic size={18} /> Konuş! {mmss(speakLeft)}</div>
+                    <p className="af-ti-note">Yüksek sesle yanıtla — adamın görüşünü ve iki gerekçesini özetle.</p>
+                    <button className="af-transcript-toggle" onClick={() => setSpk("transcript")}>konuşmayı bitir</button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="af-ti-note"><PenLine size={13} /> Ne söylediğini kısaca buraya yaz — AI bu transkripti puanlayacak (ses kaydı yok).</p>
+                    <textarea className="af-write-area" value={text} onChange={(e) => setText(e.target.value)}
+                      placeholder="Söylediklerinin kısa bir özetini yaz…" />
+                    <div className="af-write-meta"><span className={words >= 40 ? "is-ok" : ""}>{words} kelime</span></div>
+                  </>
+                )}
+              </>
+            )}
+
+            {(!isSpeaking || spk === "transcript") ? (
+              <div className="af-score-row">
+                <button className="af-score-btn is-ai" disabled={evaluating || words < 5} onClick={evaluate}>
+                  <Sparkles size={15} /> {evaluating ? "değerlendiriliyor…" : "Değerlendir"}
+                </button>
+                <span className="af-ti-aimode">{apiKey ? "AI puanı (Anthropic)" : "çevrimdışı yaklaşık puan"}</span>
+              </div>
+            ) : null}
+            {err ? <div className="af-ai-err"><AlertTriangle size={14} /> {err}</div> : null}
+          </>
+        ) : (
+          <div className="af-result">
+            <div className="af-result-cap">{isSpeaking ? "KONUŞMA" : "YAZMA"} · TOEFL INTEGRATED</div>
+            <div className="af-result-lv">{result && result.score != null ? result.score + "/30" : "—"}</div>
+            {result && result.offline ? <div className="af-band-cap">çevrimdışı yaklaşık · resmî değil</div> : <div className="af-band-cap">AI değerlendirmesi · yaklaşıktır</div>}
+            <div className="af-ai-out af-ti-feedback">{result ? result.raw : ""}</div>
+            <button className="af-q-next af-result-go" onClick={onBack}>Diğer görevler <ArrowRight size={16} /></button>
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
 

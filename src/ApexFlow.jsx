@@ -10,7 +10,7 @@ import {
   TopHUD, Catalog, Placement, VocabReview, GrammarHub,
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
   SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, OddoutRoom,
-  DialogueRoom, ParacompRoom, TranslateRoom, FocusBar,
+  DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, FocusBar,
 } from "./modules.jsx";
 
 export default function ApexFlow() {
@@ -129,6 +129,7 @@ export default function ApexFlow() {
         {view === "dialogue" && <DialogueRoom level={level} store={store} award={award} onBack={home} />}
         {view === "paracomp" && <ParacompRoom level={level} store={store} award={award} onBack={home} />}
         {view === "translate" && <TranslateRoom level={level} store={store} award={award} onBack={home} />}
+        {view === "toeflint" && <ToeflIntegratedRoom level={level} store={store} award={award} onBack={home} />}
         {view === "writing" && <WritingStudio level={level} store={store} award={award} onBack={home} />}
         {view === "reading" && <ReadingMatrix onBack={home} award={award} />}
         {view === "lexical" && <LexicalArena onBack={home} award={award} />}

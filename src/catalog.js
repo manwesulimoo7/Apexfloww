@@ -708,7 +708,7 @@ export const EXAMS = [
   { id: "TOEFL", name: "TOEFL iBT", status: "active", scoring: "0–120 (her bölüm 0–30)",
     skills: ["Reading", "Listening", "Speaking", "Writing"],
     blurb: "Akademik dört beceri; bütünleşik (integrated) konuşma ve yazma görevleri.",
-    modules: ["reading", "listening", "speaking", "writing", "lexical"] },
+    modules: ["toeflint", "reading", "listening", "speaking", "writing", "lexical"] },
   { id: "YDS", name: "YDS / e-YDS", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Çeviri", "Okuma"],
     blurb: "Tamamen çoktan seçmeli — konuşma/yazma/dinleme YOK. Kelime, gramer, cloze, çeviri (TR↔EN), paragraf tamamlama, anlamca en yakın cümle, akışı bozan cümle, diyalog tamamlama.",
@@ -735,6 +735,7 @@ export const MODULE_INFO = {
   dialogue: { name: "Diyalog Tamamlama", sub: "YDS · dialogue completion", minLv: "B2" },
   paracomp: { name: "Paragraf Tamamlama", sub: "YDS · paragraph completion", minLv: "B2" },
   translate:{ name: "Çeviri", sub: "YDS · translation", minLv: "B2" },
+  toeflint: { name: "TOEFL Integrated", sub: "oku → dinle → yaz/konuş + AI 0–30 puan", minLv: "B2" },
   reading:  { name: "Deductive Reading Matrix", sub: "T/F/NG · başlık · X-Ray", minLv: "B2" },
   lexical:  { name: "Lexical Arena", sub: "süreli eşanlam atışı", minLv: "B2" },
   syntax:   { name: "Syntax Forge", sub: "cümle kurma · Writing", minLv: "B2" },
@@ -1248,5 +1249,87 @@ export const TRANSLATE = [
       "İnsan beyni dinlenirken bile büyük miktarda enerji kullanır.",
     ], ans: 3,
     tr: "'even during rest' = dinlenirken bile; 4. şık doğru, 1. şık 'yalnızca uyurken' ile anlamı daraltır.",
+  },
+];
+
+/* ============================================================
+   TOEFL_INTEGRATED — multi-stage integrated task simulator.
+   Read (3:00) -> Listen (lecture via TTS) -> Respond (write/speak)
+   -> AI score 0-30 (scoreWithAI) or offline estimate (analyzeWriting).
+   The lecture rebuts EACH reading claim one by one (TOEFL logic).
+   Mergeable from content.json (data.toeflIntegrated).
+   Schema: { id, type:"writing"|"speaking", lv, topic,
+             reading:{title,body}, lecture:{body}, prompt, keyPoints,
+             minWords?, prep?, respond? }
+============================================================ */
+export const TOEFL_INTEGRATED = [
+  {
+    id: "ti_megafauna", type: "writing", lv: "B2", topic: "Paleontology", minWords: 150,
+    reading: {
+      title: "Why Did the Ice Age Megafauna Disappear?",
+      body:
+        "At the end of the last Ice Age, roughly eleven thousand years ago, dozens of species of large mammals — mammoths, giant ground sloths, sabre-toothed cats and others — vanished from the planet. Scientists have long debated why this dramatic wave of extinctions occurred, and three explanations are often put forward.\n\n" +
+        "The first points to climate change. As the glaciers retreated, global temperatures rose and the cold, grassy steppes that had supported huge herds were gradually replaced by forests and wetlands. According to this view, the megafauna simply could not survive the loss of their preferred habitat and food sources.\n\n" +
+        "A second explanation blames human hunters. Around the same time, modern humans were spreading rapidly across Eurasia and into the Americas. Armed with increasingly sophisticated weapons, these hunters may have killed the large, slow-breeding animals faster than the populations could replace themselves, driving them to extinction in a relatively short period.\n\n" +
+        "A third hypothesis focuses on disease. As humans and their domesticated animals moved into new regions, they may have introduced unfamiliar pathogens. Large mammals with no natural immunity could have been devastated by these new diseases, which spread quickly through dense herds and wiped out entire species.",
+    },
+    lecture: {
+      body:
+        "Those three explanations sound convincing, but each runs into serious problems.\n\n" +
+        "Take the climate argument first. The thing is, these same large mammals had already survived many previous warm periods. Over the past two million years, the Earth went through dozens of cycles of warming and cooling, and the megafauna came through all of them just fine. So why would this particular warming, and only this one, suddenly wipe them out? Climate change alone can't explain it.\n\n" +
+        "Now, the idea that human hunters were responsible. If hunting were the main cause, we would expect to find large numbers of kill sites — places littered with the bones of these animals alongside human tools. But in fact such sites are surprisingly rare. For most of the extinct species, we have almost no direct evidence that humans hunted them at all.\n\n" +
+        "And finally, the disease theory. For a single disease to wipe out so many different species, it would have to jump easily between very different kinds of animals — from sloths to mammoths to big cats. We know of almost no disease that behaves this way. A germ deadly to one group is usually harmless to others. So a single super-disease is extremely unlikely.",
+    },
+    prompt: "Summarize the points made in the lecture, explaining how they cast doubt on the specific points made in the reading passage.",
+    keyPoints: [
+      "Ders, iklim iddiasını çürütür: aynı hayvanlar önceki birçok ısınma döneminden sağ çıktı — neden yalnızca bu ısınma onları yok etsin?",
+      "Ders, insan avı iddiasını çürütür: avlanma ana neden olsaydı çok sayıda 'kill site' beklenirdi, ama bu alanlar şaşırtıcı derecede nadir.",
+      "Ders, hastalık iddiasını çürütür: tek bir hastalığın tembel hayvandan mamuta, büyük kedilere kadar çok farklı türleri yok etmesi gerekirdi; böyle davranan hastalık neredeyse yok.",
+    ],
+  },
+  {
+    id: "ti_maya", type: "writing", lv: "C1", topic: "History", minWords: 150,
+    reading: {
+      title: "Why Did the Classic Maya Cities Collapse?",
+      body:
+        "Between roughly 800 and 900 CE, many of the great cities of the Classic Maya in Central America were abandoned. Monumental construction stopped, populations fell sharply, and the political system of competing kingdoms collapsed. Historians have proposed three main reasons for this remarkable decline.\n\n" +
+        "The first is drought. Studies of ancient lake sediments suggest that the region suffered a series of unusually dry decades during this period. Supporters argue that prolonged drought would have ruined harvests and emptied reservoirs, making it impossible to feed the large urban populations.\n\n" +
+        "A second explanation emphasises warfare. Carvings and inscriptions from the final centuries record increasingly frequent conflicts between rival city-states. According to this view, constant warfare destroyed farmland, disrupted trade, and eventually shattered the social order that held the cities together.\n\n" +
+        "A third idea focuses on environmental damage caused by the Maya themselves. To support their growing populations, the Maya cleared vast areas of forest for farming. This deforestation, supporters claim, led to soil erosion and declining crop yields, until the land could no longer sustain such large communities.",
+    },
+    lecture: {
+      body:
+        "These explanations are popular, but none of them is as strong as it first appears.\n\n" +
+        "Consider the drought theory. It's true that the climate became drier, but not every Maya city was affected in the same way. In fact, some cities in the southern lowlands were abandoned while others nearby, with very similar rainfall, continued to thrive for another century or more. If drought were the real cause, we wouldn't expect such different outcomes in places with almost identical climates.\n\n" +
+        "Next, the argument about warfare. Yes, the inscriptions describe wars — but warfare was nothing new for the Maya. They had been fighting one another for many centuries, during the very period when their cities were growing and flourishing. Something they had lived with for so long is unlikely to be the sudden cause of collapse.\n\n" +
+        "Finally, the idea of self-inflicted environmental damage. Recent studies of ancient soils show that in many regions the Maya were actually skilled land managers. They used terraces, raised fields, and forest gardens to protect the soil. This careful management hardly fits the picture of a people who thoughtlessly destroyed their own environment.",
+    },
+    prompt: "Summarize the points made in the lecture, explaining how they cast doubt on the specific points made in the reading passage.",
+    keyPoints: [
+      "Ders, kuraklık iddiasını zayıflatır: benzer yağışa sahip yakın şehirlerden bazıları terk edilirken bazıları gelişmeye devam etti; kuraklık tek neden olsa bu fark beklenmezdi.",
+      "Ders, savaş iddiasını zayıflatır: Maya halkı yüzyıllardır savaşıyordu — şehirler tam da bu dönemde büyüyüp gelişti; uzun süredir yaşanan bir şey ani çöküşün nedeni olamaz.",
+      "Ders, çevresel tahribat iddiasını zayıflatır: yeni toprak çalışmaları Maya'nın teraslar ve ormanlık bahçelerle toprağı koruyan becerikli arazi yöneticileri olduğunu gösteriyor.",
+    ],
+  },
+  {
+    id: "ti_shuttle", type: "speaking", lv: "B2", topic: "Campus Life", prep: 20, respond: 60,
+    reading: {
+      title: "Notice: Late-Night Shuttle to Be Discontinued",
+      body:
+        "Notice from the Department of Transportation Services\n\n" +
+        "Beginning next month, the university will discontinue its late-night shuttle bus, which currently runs between the main library and the residence halls from 10 p.m. to 2 a.m. The university says the service is being cut because relatively few students use it during these hours, and the money saved will instead be used to add more buses during the busy daytime schedule. Students who need to travel across campus late at night are encouraged to use the well-lit main walkways.",
+    },
+    lecture: {
+      body:
+        "Honestly, I think this is a bad decision, and the reasons they give don't hold up.\n\n" +
+        "First, they say hardly anyone uses the late-night shuttle. But that's just not true from what I've seen. During exam periods, that bus is packed — students stay at the library until one in the morning and rely on it to get home. Maybe the numbers look low if you average across the whole year, but when students actually need it, it's essential.\n\n" +
+        "And second, telling us to just walk along the main paths? That ignores safety. The campus is huge, and walking twenty minutes alone in the dark isn't something a lot of students feel comfortable doing. The shuttle isn't only about convenience — it's about getting home safely at night.",
+    },
+    prompt: "The man expresses his opinion about the university's plan to discontinue the late-night shuttle. State his opinion and explain the reasons he gives for holding it.",
+    keyPoints: [
+      "Adam karara karşı çıkıyor — bunun kötü bir karar olduğunu düşünüyor.",
+      "1. neden: 'çok az öğrenci kullanıyor' iddiası yanlış — özellikle sınav dönemlerinde otobüs tıklım tıklım ve öğrenciler gece geç saatte eve dönmek için ona güveniyor.",
+      "2. neden: ana yollardan yürümek güvenlik sorunu — kampüs çok büyük; gece tek başına 20 dakika yürümek çoğu öğrenciyi tedirgin ediyor, mekik güvenli dönüş demek.",
+    ],
   },
 ];
