@@ -626,6 +626,10 @@ export function Styles() {
 .af-cloze-p{color:var(--txt);font-size:16px;line-height:1.9;font-family:var(--serif);margin:0 0 14px;}
 .af-mcq .af-cloze-ref{margin-top:18px;padding-top:14px;border-top:1px solid var(--line2);}
 .af-mcq .af-cloze-p{font-size:14.5px;line-height:1.8;color:var(--txt2);}
+
+/* ===== restate (closest-in-meaning sentence) ===== */
+.af-card-icon.af-ic-restate{color:#f472b6;background:rgba(244,114,182,.12);}
+.af-restate-hint{display:flex;align-items:center;gap:6px;margin-top:16px;color:var(--txt2);font-size:12.5px;font-family:var(--mono);}
 .af-content-foot{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;}
 .af-content-reload{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line2);color:var(--txt2);border-radius:8px;padding:5px 10px;font-size:11.5px;cursor:pointer;font-family:var(--mono);}
 .af-content-reload:hover{border-color:var(--em-d);color:var(--em-b);}

@@ -712,11 +712,11 @@ export const EXAMS = [
   { id: "YDS", name: "YDS / e-YDS", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Çeviri", "Okuma"],
     blurb: "Tamamen çoktan seçmeli — konuşma/yazma/dinleme YOK. Kelime, gramer, cloze, çeviri (TR↔EN), paragraf tamamlama, anlamca en yakın cümle, akışı bozan cümle, diyalog tamamlama.",
-    modules: ["cloze", "grammar", "lexical", "articles"] },
+    modules: ["cloze", "restate", "grammar", "lexical", "articles"] },
   { id: "YOKDIL", name: "YÖKDİL (Fen · Sağlık · Sosyal)", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Okuma"],
     blurb: "YDS formatına benzer; alanına göre (Fen, Sağlık, Sosyal) terim ağırlıklı. Akademik personel ve TUS/DUS dil şartı için de kullanılır.",
-    modules: ["cloze", "grammar", "lexical", "articles"] },
+    modules: ["cloze", "restate", "grammar", "lexical", "articles"] },
   { id: "GENEL", name: "Sıfırdan İngilizce", status: "active", scoring: "CEFR A1→C2",
     skills: ["Gramer", "Kelime", "Dinleme", "Okuma"],
     blurb: "Sınavdan bağımsız temel. Seviye testiyle başla; A1’den ilerle ya da eksik temelini kapat.",
@@ -730,6 +730,7 @@ export const MODULE_INFO = {
   listening:{ name: "Dinleme Odası", sub: "sesli metin + sorular", minLv: "A2" },
   articles: { name: "Okuma Parçaları", sub: "makale + sorular (kolay format)", minLv: "A2" },
   cloze:    { name: "Boşluk Doldurma", sub: "YDS/YÖKDİL cloze", minLv: "B2" },
+  restate:  { name: "Anlamca En Yakın Cümle", sub: "YDS · restatement", minLv: "B2" },
   reading:  { name: "Deductive Reading Matrix", sub: "T/F/NG · başlık · X-Ray", minLv: "B2" },
   lexical:  { name: "Lexical Arena", sub: "süreli eşanlam atışı", minLv: "B2" },
   syntax:   { name: "Syntax Forge", sub: "cümle kurma · Writing", minLv: "B2" },
@@ -834,5 +835,82 @@ export const CLOZE = [
       { n: 4, opts: ["Without", "With", "Besides", "Despite"], ans: 0, tr: "Without = -sız; iyi park olmadan dinlenecek yer az kalır." },
       { n: 5, opts: ["if", "so", "then", "or"], ans: 0, tr: "if = eğer; ‘büyümeyi yaşam kalitesiyle dengelerlerse’ koşulu." },
     ],
+  },
+];
+
+/* ============================================================
+   RESTATE — closest-in-meaning sentence (YDS restatement).
+   A stem sentence + 4 full-sentence options; pick the closest
+   paraphrase. Reuses the shared MCQRunner (stem -> q).
+   Also mergeable from content.json (data.restate).
+   Schema: { id, lv, stem, opts:[…4 sentences…], ans, tr }
+   ans starts at 0; tr = short Turkish rationale.
+============================================================ */
+export const RESTATE = [
+  {
+    id: "rs_policy", lv: "B2",
+    stem: "Although the policy was controversial, most experts agreed it was necessary.",
+    opts: [
+      "Most experts opposed the policy because it was controversial.",
+      "The policy was necessary, so it could not be controversial.",
+      "Even though it sparked debate, the policy was seen as necessary by most experts.",
+      "Experts were divided on whether the policy was necessary.",
+    ], ans: 2,
+    tr: "'Although … most experts agreed it was necessary' = tartışmalı olsa da çoğu uzman gerekli gördü. 3. şık bu zıtlığı birebir karşılıyor.",
+  },
+  {
+    id: "rs_storm", lv: "B2",
+    stem: "Because the storm damaged the roads, several villages were cut off for days.",
+    opts: [
+      "The storm was caused by several villages being cut off.",
+      "Several villages remained isolated for days because the storm had damaged the roads.",
+      "The roads were repaired before the storm reached the villages.",
+      "The villages were cut off, which is why the storm damaged the roads.",
+    ], ans: 1,
+    tr: "Neden-sonuç: yollar zarar gördüğü için köyler izole kaldı. 1. şık aynı neden-sonuç ilişkisini korur; 4. şık ilişkiyi tersine çevirir.",
+  },
+  {
+    id: "rs_reservation", lv: "B2",
+    stem: "Unless you make a reservation, you will not get a table at that restaurant.",
+    opts: [
+      "If you make a reservation, you will not get a table.",
+      "You will get a table only if you do not make a reservation.",
+      "You will get a table at that restaurant only if you make a reservation.",
+      "Reservations are not needed to get a table at that restaurant.",
+    ], ans: 2,
+    tr: "'Unless you make a reservation' = rezervasyon yapmazsan; yani ancak rezervasyon yaparsan masa bulursun. 2. şık koşulu doğru kurar.",
+  },
+  {
+    id: "rs_vaccine", lv: "B2",
+    stem: "The new vaccine was developed by a small team of researchers in less than a year.",
+    opts: [
+      "A small team of researchers developed the new vaccine in less than a year.",
+      "The new vaccine took a small team more than a year to develop.",
+      "The researchers were developed by the new vaccine within a year.",
+      "It took less than a year for the vaccine to develop the research team.",
+    ], ans: 0,
+    tr: "Edilgenin etken karşılığı: küçük bir ekip aşıyı bir yıldan kısa sürede geliştirdi. 0. şık aynı anlamı verir.",
+  },
+  {
+    id: "rs_manager", lv: "C1",
+    stem: "Despite having very little experience, the young manager handled the crisis with remarkable calm.",
+    opts: [
+      "The young manager stayed calm during the crisis because she was very experienced.",
+      "Although she had little experience, the young manager dealt with the crisis very calmly.",
+      "The crisis made the inexperienced manager lose her calm.",
+      "The manager avoided the crisis because she lacked experience.",
+    ], ans: 1,
+    tr: "'Despite having very little experience … with remarkable calm' = az deneyimine rağmen sakin yönetti. 1. şık (Although) aynı ödünleme anlamını taşır.",
+  },
+  {
+    id: "rs_fuel", lv: "C1",
+    stem: "The sudden rise in fuel prices forced many small businesses to raise their own prices.",
+    opts: [
+      "Many small businesses lowered their prices when fuel prices fell.",
+      "Small businesses raised fuel prices in order to make a profit.",
+      "Because fuel prices rose suddenly, many small businesses had to increase their prices too.",
+      "Fuel prices rose because small businesses had increased their prices.",
+    ], ans: 2,
+    tr: "'sudden rise in fuel prices forced … to raise their own prices' = yakıt zammı işletmeleri fiyat artırmaya zorladı. 2. şık neden-sonucu korur; 4. şık nedeni tersine çevirir.",
   },
 ];
