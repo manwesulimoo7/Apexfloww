@@ -6,7 +6,7 @@ import {
   Crosshair, Sparkles, Volume2, RefreshCw, GraduationCap, PenLine,
   ListChecks, Languages, BookMarked, Headphones, Repeat, Star, Lock,
   ChevronRight, RotateCw, Trophy, Pause, Sun, Moon, FileText, Replace, Filter,
-  MessageSquare, AlignLeft, Languages as LanguagesIcon,
+  MessageSquare, AlignLeft, Languages as LanguagesIcon, ClipboardList, BarChart3,
 } from "lucide-react";
 import { tierFor, speak, stopSpeak, speechSupported, reviewQueue, analyzeWriting, scoreWithAI } from "./lib.js";
 import {
@@ -41,6 +41,13 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+// YÖKDİL field filter: only active when entered via YOKDIL with a chosen field.
+// Items without a field default to "genel". Falls back to the full list if empty.
+function byField(arr, exam, field) {
+  if (exam !== "YOKDIL" || !field) return arr;
+  const f = arr.filter((x) => (x.field || "genel") === field);
+  return f.length ? f : arr;
 }
 
 /* ============================================================
@@ -853,7 +860,7 @@ const MODULE_ICON = {
   speaking: <Mic size={20} />, writing: <PenLine size={20} />, cloze: <FileText size={20} />,
   restate: <Replace size={20} />, oddout: <Filter size={20} />,
   dialogue: <MessageSquare size={20} />, paracomp: <AlignLeft size={20} />, translate: <LanguagesIcon size={20} />,
-  toeflint: <Layers size={20} />,
+  toeflint: <Layers size={20} />, mock: <ClipboardList size={20} />,
 };
 function ModuleCard({ k, ctx, go, done }) {
   const info = MODULE_INFO[k];
@@ -938,7 +945,40 @@ const BADGES = [
   { id: "cor200",    cat: "Hacim", name: "İki Yüz İsabet",       desc: "200 doğru yanıt ver",        ic: <Check size={18} />,         test: (s) => s.correct >= 200 },
   { id: "cor1000",   cat: "Hacim", name: "Bin İsabet",           desc: "1.000 doğru yanıt ver",      ic: <Trophy size={18} />,        test: (s) => s.correct >= 1000 },
   { id: "day100",    cat: "Hacim", name: "Günün Hakkını Ver",    desc: "Bir günde 100 XP topla",     ic: <Flame size={18} />,         test: (s) => (s.daily && s.daily.xp >= 100) },
+
+  // — Odak —
+  { id: "focus60",   cat: "Hacim", name: "Derin Çalışma",        desc: "Toplam 60 dk odak",          ic: <Timer size={18} />,         test: (s) => (s.focusMinutes || 0) >= 60 },
+  { id: "focus300",  cat: "Hacim", name: "Maraton Zihin",        desc: "Toplam 300 dk odak",         ic: <Flame size={18} />,         test: (s) => (s.focusMinutes || 0) >= 300 },
+  { id: "focus1000", cat: "Hacim", name: "Çelik İrade",          desc: "Toplam 1.000 dk odak",       ic: <Trophy size={18} />,        test: (s) => (s.focusMinutes || 0) >= 1000 },
 ];
+
+// Gelişim Raporu — per-question-type accuracy (state.stats) + focus minutes (defensive)
+function ProgressReport({ state }) {
+  const stats = state.stats || {};
+  const rows = Object.entries(stats).filter(([, v]) => v && v.t > 0).sort((a, b) => b[1].t - a[1].t);
+  const focusMin = state.focusMinutes || 0;
+  if (!rows.length && !focusMin) return null;
+  return (
+    <div className="af-report">
+      <div className="af-report-head"><BarChart3 size={15} /> Gelişim Raporu</div>
+      {focusMin ? <div className="af-report-focus"><Timer size={13} /> Toplam odak süresi: <b>{focusMin} dk</b></div> : null}
+      {rows.length ? (
+        <div className="af-report-list">
+          {rows.map(([type, v]) => {
+            const pct = Math.round((v.c / v.t) * 100);
+            return (
+              <div key={type} className="af-report-row">
+                <span className="af-report-type">{type}</span>
+                <span className="af-report-acc">{v.c}/{v.t} · %{pct}</span>
+                <span className="af-task-bar"><i style={{ width: pct + "%" }} /></span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function Badges({ state }) {
   const [open, setOpen] = useState(true);
@@ -1009,6 +1049,7 @@ export function Catalog({ store, go, content = {}, onFocus }) {
   const [tab, setTab] = useState("learn");
   const [learnLv, setLearnLv] = useState(userLv);
   const [openExam, setOpenExam] = useState(null);
+  const [examField, setExamField] = useState("genel"); // YÖKDİL alan seçimi
 
   const dueInfo = useMemo(() => reviewQueue(state.srs, vocabForLevel(userLv), 14), [state.srs, userLv]);
   const dueCount = dueInfo.due.length;
@@ -1143,11 +1184,23 @@ export function Catalog({ store, go, content = {}, onFocus }) {
                   {!locked ? <div className="af-exam-expand">{open ? "modülleri gizle" : "modülleri aç"} <ChevronRight size={13} className={open ? "af-rot" : ""} /></div> : null}
                 </button>
                 {open && !locked ? (
-                  <div className="af-exam-mods af-grid">
-                    {ex.modules.map((k) => (
-                      <ModuleCard key={k} k={k} ctx={{ level: userLv, exam: ex.id }} go={go} />
-                    ))}
-                  </div>
+                  <>
+                    {ex.fieldFilter ? (
+                      <div className="af-fieldsel">
+                        <span className="af-fieldsel-cap"><Filter size={13} /> Alan</span>
+                        {[["genel", "Genel"], ["fen", "Fen"], ["saglik", "Sağlık"], ["sosyal", "Sosyal"]].map(([id, label]) => (
+                          <button key={id} className={"af-fieldsel-btn " + (examField === id ? "is-on" : "")}
+                            onClick={() => setExamField(id)}>{label}</button>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="af-exam-mods af-grid">
+                      {ex.modules.map((k) => (
+                        <ModuleCard key={k} k={k} go={go}
+                          ctx={{ level: userLv, exam: ex.id, field: ex.fieldFilter ? examField : undefined }} />
+                      ))}
+                    </div>
+                  </>
                 ) : null}
               </div>
             );
@@ -1155,6 +1208,7 @@ export function Catalog({ store, go, content = {}, onFocus }) {
         </div>
       )}
 
+      <ProgressReport state={state} />
       <Badges state={state} />
 
       <div className="af-settings">
@@ -1567,12 +1621,13 @@ function WritingItem({ item, store, award, onBack }) {
 /* ============================================================
    ARTICLES  (simple reading: passage + MCQs)
 ============================================================ */
-export function ArticleRoom({ level, store, award, onBack }) {
+export function ArticleRoom({ level, store, award, onBack, exam, field }) {
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
-    const f = ARTICLES.filter((a) => !level || lvIndex(a.lv) <= lvIndex(level));
+    let f = ARTICLES.filter((a) => !level || lvIndex(a.lv) <= lvIndex(level));
+    f = byField(f, exam, field);
     return f.length ? f : ARTICLES;
-  }, [level]);
+  }, [level, exam, field]);
   if (open) return <ArticleItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
@@ -1635,12 +1690,13 @@ function ArticleItem({ item, store, award, onBack }) {
    CLOZE  (gap-fill: academic passage + numbered blanks)
    Same shape as ARTICLES; blanks reuse the shared MCQRunner.
 ============================================================ */
-export function ClozeRoom({ level, store, award, onBack }) {
+export function ClozeRoom({ level, store, award, onBack, exam, field }) {
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
-    const f = CLOZE.filter((c) => !level || lvIndex(c.lv) <= lvIndex(level));
+    let f = CLOZE.filter((c) => !level || lvIndex(c.lv) <= lvIndex(level));
+    f = byField(f, exam, field);
     return f.length ? f : CLOZE;
-  }, [level]);
+  }, [level, exam, field]);
   if (open) return <ClozeItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
@@ -1717,11 +1773,12 @@ function ClozeItem({ item, store, award, onBack }) {
    RESTATE  (closest-in-meaning sentence — YDS restatement)
    A deck of stem sentences; reuses the shared MCQRunner.
 ============================================================ */
-export function RestateRoom({ level, store, award, onBack }) {
+export function RestateRoom({ level, store, award, onBack, exam, field }) {
   const items = useMemo(() => {
-    const f = RESTATE.filter((r) => !level || lvIndex(r.lv) <= lvIndex(level));
+    let f = RESTATE.filter((r) => !level || lvIndex(r.lv) <= lvIndex(level));
+    f = byField(f, exam, field);
     return f.length ? f : RESTATE;
-  }, [level]);
+  }, [level, exam, field]);
   const quizItems = useMemo(
     () => items.map((r) => ({ q: r.stem, opts: r.opts, ans: r.ans, tr: r.tr })),
     [items]
@@ -1763,11 +1820,12 @@ export function RestateRoom({ level, store, award, onBack }) {
    Options = sentence numbers; reuses the shared MCQRunner.
 ============================================================ */
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-export function OddoutRoom({ level, store, award, onBack }) {
+export function OddoutRoom({ level, store, award, onBack, exam, field }) {
   const items = useMemo(() => {
-    const f = ODDOUT.filter((o) => !level || lvIndex(o.lv) <= lvIndex(level));
+    let f = ODDOUT.filter((o) => !level || lvIndex(o.lv) <= lvIndex(level));
+    f = byField(f, exam, field);
     return f.length ? f : ODDOUT;
-  }, [level]);
+  }, [level, exam, field]);
   const quizItems = useMemo(
     () => items.map((o) => ({
       q: (
@@ -1850,11 +1908,12 @@ function DeckRoom({ title, sub, empty, quizItems, items, prefix, store, award, o
 /* ============================================================
    DIALOGUE  (two-person dialogue completion — YDS)
 ============================================================ */
-export function DialogueRoom({ level, store, award, onBack }) {
+export function DialogueRoom({ level, store, award, onBack, exam, field }) {
   const items = useMemo(() => {
-    const f = DIALOGUE.filter((d) => !level || lvIndex(d.lv) <= lvIndex(level));
+    let f = DIALOGUE.filter((d) => !level || lvIndex(d.lv) <= lvIndex(level));
+    f = byField(f, exam, field);
     return f.length ? f : DIALOGUE;
-  }, [level]);
+  }, [level, exam, field]);
   const quizItems = useMemo(
     () => items.map((d) => ({
       q: (
@@ -1881,11 +1940,12 @@ export function DialogueRoom({ level, store, award, onBack }) {
 /* ============================================================
    PARACOMP  (paragraph completion — YDS)
 ============================================================ */
-export function ParacompRoom({ level, store, award, onBack }) {
+export function ParacompRoom({ level, store, award, onBack, exam, field }) {
   const items = useMemo(() => {
-    const f = PARACOMP.filter((p) => !level || lvIndex(p.lv) <= lvIndex(level));
+    let f = PARACOMP.filter((p) => !level || lvIndex(p.lv) <= lvIndex(level));
+    f = byField(f, exam, field);
     return f.length ? f : PARACOMP;
-  }, [level]);
+  }, [level, exam, field]);
   const quizItems = useMemo(
     () => items.map((p) => {
       const parts = p.text.split("----");
@@ -1914,11 +1974,12 @@ export function ParacompRoom({ level, store, award, onBack }) {
 /* ============================================================
    TRANSLATE  (best translation — YDS)
 ============================================================ */
-export function TranslateRoom({ level, store, award, onBack }) {
+export function TranslateRoom({ level, store, award, onBack, exam, field }) {
   const items = useMemo(() => {
-    const f = TRANSLATE.filter((t) => !level || lvIndex(t.lv) <= lvIndex(level));
+    let f = TRANSLATE.filter((t) => !level || lvIndex(t.lv) <= lvIndex(level));
+    f = byField(f, exam, field);
     return f.length ? f : TRANSLATE;
-  }, [level]);
+  }, [level, exam, field]);
   const quizItems = useMemo(
     () => items.map((t) => ({
       q: (
@@ -2195,6 +2256,218 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
   );
 }
 
+
+/* ============================================================
+   MOCK EXAM  (full-screen, timed, mixed MCQ — no live feedback)
+   Pulls from the existing MCQ pools; reuses af-mcq rendering.
+============================================================ */
+const lvOk = (lv, level) => !level || lvIndex(lv) <= lvIndex(level);
+function buildMockPool(level) {
+  const pool = [];
+  CLOZE.filter((c) => lvOk(c.lv, level)).forEach((c) => {
+    c.blanks.forEach((b) => pool.push({
+      type: "Boşluk Doldurma", opts: b.opts, ans: b.ans, tr: b.tr,
+      q: (<div className="af-mock-q"><p className="af-mock-passage">{c.text}</p><p className="af-mock-ask">({b.n}) numaralı boşluğa hangi seçenek gelmeli?</p></div>),
+    }));
+  });
+  RESTATE.filter((r) => lvOk(r.lv, level)).forEach((r) =>
+    pool.push({ type: "Anlamca En Yakın Cümle", q: r.stem, opts: r.opts, ans: r.ans, tr: r.tr }));
+  ODDOUT.filter((o) => lvOk(o.lv, level)).forEach((o) =>
+    pool.push({
+      type: "Akışı Bozan Cümle", opts: o.sentences.map((_, i) => ROMAN[i] + ". cümle"), ans: o.ans, tr: o.tr,
+      q: (<div className="af-oddout">{o.sentences.map((s, i) => <p key={i} className="af-oddout-s"><span className="af-oddout-n">{ROMAN[i]}</span>{s}</p>)}</div>),
+    }));
+  DIALOGUE.filter((d) => lvOk(d.lv, level)).forEach((d) =>
+    pool.push({
+      type: "Diyalog Tamamlama", opts: d.opts, ans: d.ans, tr: d.tr,
+      q: (<div className="af-dialogue">{d.lines.map((ln, i) => <p key={i} className={"af-dlg-line" + (i === d.blankIndex ? " is-blank" : "")}><span className="af-dlg-sp">{ln.sp}:</span><span className="af-dlg-t">{i === d.blankIndex ? "____" : ln.t}</span></p>)}</div>),
+    }));
+  PARACOMP.filter((p) => lvOk(p.lv, level)).forEach((p) => {
+    const parts = p.text.split("----");
+    pool.push({
+      type: "Paragraf Tamamlama", opts: p.opts, ans: p.ans, tr: p.tr,
+      q: (<p className="af-paracomp-p">{parts.flatMap((seg, i) => i === 0 ? [<span key={"s" + i}>{seg}</span>] : [<span key={"g" + i} className="af-paracomp-gap"> ____ </span>, <span key={"s" + i}>{seg}</span>])}</p>),
+    });
+  });
+  TRANSLATE.filter((t) => lvOk(t.lv, level)).forEach((t) =>
+    pool.push({
+      type: "Çeviri", opts: t.opts, ans: t.ans, tr: t.tr,
+      q: (<div className="af-translate"><div className="af-tr-dir">{t.dir === "tr2en" ? "Türkçe → İngilizce" : "İngilizce → Türkçe"}</div><div className="af-tr-source">{t.source}</div></div>),
+    }));
+  GRAMMAR.filter((g) => lvOk(g.lv, level)).forEach((g) =>
+    g.items.forEach((it) => pool.push({ type: "Gramer", q: it.q, opts: it.opts, ans: it.ans, tr: it.tr })));
+  return pool;
+}
+
+export function MockRoom({ level, store, onBack }) {
+  const [stage, setStage] = useState("setup");   // setup -> run -> done
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState([]);
+  const [i, setI] = useState(0);
+  const [totalSec, setTotalSec] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const startedRef = useRef(0);
+  const answersRef = useRef(answers); answersRef.current = answers;
+  const finishedRef = useRef(false);
+  const sessionId = useRef("m_" + Date.now());
+  const left = useTimer(totalSec, stage === "run");
+
+  const poolSize = useMemo(() => buildMockPool(level).length, [level]);
+  const options = [10, 20, 30].filter((n) => n <= poolSize);
+  if (!options.length && poolSize > 0) options.push(poolSize);
+
+  function tryFullscreen(on) {
+    try {
+      if (on) { const el = document.documentElement; el.requestFullscreen && el.requestFullscreen(); }
+      else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+    } catch (e) { /* not supported — in-app full-screen container is enough */ }
+  }
+
+  function start(n) {
+    const pool = shuffle(buildMockPool(level)).slice(0, n);
+    if (!pool.length) return;
+    finishedRef.current = false;
+    setQuestions(pool);
+    setAnswers(new Array(pool.length).fill(null));
+    setI(0);
+    setTotalSec(pool.length * 75);
+    startedRef.current = Date.now();
+    tryFullscreen(true);
+    setStage("run");
+  }
+
+  function finish() {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    const ans = answersRef.current;
+    questions.forEach((q, idx) => {
+      const isC = ans[idx] === q.ans;
+      store.recordStat(q.type, isC);   // count once into Gelişim Raporu
+      store.award(8, isC, 0);          // grant XP via persistence layer (no combo flash)
+    });
+    store.touchStreak();
+    store.markDone("mock:" + sessionId.current);
+    setElapsed(Math.round((Date.now() - startedRef.current) / 1000));
+    tryFullscreen(false);
+    setStage("done");
+  }
+  // soft auto-finish when the clock runs out (wall-clock guard avoids the
+  // stale left===0 on the setup->run transition render)
+  useEffect(() => {
+    if (stage === "run" && totalSec > 0 && left === 0 &&
+        Date.now() - startedRef.current >= (totalSec - 1) * 1000) finish();
+  }, [stage, left, totalSec]);
+  useEffect(() => () => tryFullscreen(false), []);
+
+  function choose(idx) {
+    setAnswers((a) => { const n = a.slice(); n[i] = idx; return n; });
+  }
+  function next() { if (i + 1 < questions.length) setI(i + 1); else finish(); }
+  function quit() { tryFullscreen(false); onBack(); }
+
+  if (stage === "setup") {
+    return (
+      <div className="af-mock af-mock-setup">
+        <div className="af-mock-card">
+          <div className="af-mock-cap"><ClipboardList size={16} /> DENEME SINAVI</div>
+          <h2 className="af-mock-title">Tam ekran, süreli karışık test</h2>
+          <p className="af-mock-lede">Seviyene uygun (≤ {level}) sorulardan rastgele karışık bir test. Boşluk doldurma, anlamca en yakın cümle, akışı bozan cümle, diyalog, paragraf tamamlama, çeviri ve gramer karışır. Sırasında doğru/yanlış gösterilmez — sonunda topluca değerlendirilir.</p>
+          <div className="af-mock-pick">
+            <span className="af-mock-pick-cap">Soru sayısı (≈75 sn/soru)</span>
+            <div className="af-mock-pickrow">
+              {options.length ? options.map((n) => (
+                <button key={n} className="af-mock-pickbtn" onClick={() => start(n)}>
+                  {n} soru · {Math.round(n * 75 / 60)} dk
+                </button>
+              )) : <span className="af-empty"><AlertTriangle size={14} /> Bu seviyede yeterli soru havuzu yok.</span>}
+            </div>
+          </div>
+          <button className="af-mock-exit" onClick={onBack}>Vazgeç</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (stage === "run") {
+    const q = questions[i];
+    const sel = answers[i];
+    const last = i + 1 >= questions.length;
+    return (
+      <div className="af-mock af-mock-run">
+        <div className="af-mock-topbar">
+          <span className="af-mock-prog">{i + 1} / {questions.length}</span>
+          <span className="af-mock-bar"><i style={{ width: ((i) / questions.length) * 100 + "%" }} /></span>
+          <span className={"af-mock-clock" + (left <= 30 ? " is-low" : "")}><Timer size={14} /> {mmss(left)}</span>
+          <button className="af-mock-quit" onClick={quit} title="çıkış"><X size={16} /></button>
+        </div>
+        <div className="af-mock-stage">
+          <div className="af-mock-type">{q.type}</div>
+          <div className="af-q-text">{q.q}</div>
+          <div className="af-mcq-opts">
+            {q.opts.map((o, idx) => (
+              <button key={idx} className={"af-mcq-opt" + (idx === sel ? " is-sel" : "")} onClick={() => choose(idx)}>
+                <span className="af-mcq-key">{String.fromCharCode(65 + idx)}</span><span>{o}</span>
+              </button>
+            ))}
+          </div>
+          <button className="af-q-next af-mock-next" disabled={sel == null} onClick={next}>
+            {last ? <>Bitir <Check size={15} /></> : <>Sonraki <ArrowRight size={15} /></>}
+          </button>
+          {left === 0 ? <div className="af-ti-note"><Timer size={13} /> Süre doldu — sınav kapanıyor…</div> : null}
+        </div>
+      </div>
+    );
+  }
+
+  // done
+  const correct = questions.reduce((acc, q, idx) => acc + (answers[idx] === q.ans ? 1 : 0), 0);
+  const pct = questions.length ? Math.round((correct / questions.length) * 100) : 0;
+  const breakdown = {};
+  questions.forEach((q, idx) => {
+    const b = breakdown[q.type] || { c: 0, t: 0 };
+    b.t += 1; if (answers[idx] === q.ans) b.c += 1;
+    breakdown[q.type] = b;
+  });
+  return (
+    <div className="af-mock af-mock-done">
+      <div className="af-result">
+        <div className="af-result-cap">DENEME TAMAM</div>
+        <div className="af-result-lv">{correct}/{questions.length}</div>
+        <div className="af-band-cap">%{pct} doğru · süre {mmss(elapsed)} / {mmss(totalSec)}</div>
+      </div>
+      <div className="af-mock-breakdown">
+        <div className="af-mock-bd-cap">Soru tipine göre</div>
+        {Object.entries(breakdown).map(([t, b]) => (
+          <div key={t} className="af-mock-bd-row">
+            <span className="af-mock-bd-type">{t}</span>
+            <span className="af-mock-bd-score">{b.c}/{b.t}</span>
+            <span className="af-task-bar"><i style={{ width: (b.t ? (b.c / b.t) * 100 : 0) + "%" }} /></span>
+          </div>
+        ))}
+      </div>
+      <div className="af-mock-review">
+        <div className="af-mock-bd-cap">Gözden geçirme</div>
+        {questions.map((q, idx) => {
+          const ok = answers[idx] === q.ans;
+          return (
+            <div key={idx} className={"af-mock-rev " + (ok ? "is-ok" : "is-no")}>
+              <div className="af-mock-rev-head">
+                <span className="af-mock-rev-n">{idx + 1}</span>
+                <span className="af-mock-rev-type">{q.type}</span>
+                {ok ? <Check size={14} className="af-mock-rev-ic is-ok" /> : <X size={14} className="af-mock-rev-ic is-no" />}
+              </div>
+              <div className="af-mock-rev-ans"><b>Doğru:</b> {q.opts[q.ans]}</div>
+              {!ok && answers[idx] != null ? <div className="af-mock-rev-yours">Senin: {q.opts[answers[idx]]}</div> : null}
+              {answers[idx] == null ? <div className="af-mock-rev-yours">boş bırakıldı</div> : null}
+              {q.tr ? <div className="af-q-exp"><Lightbulb size={13} /> {q.tr}</div> : null}
+            </div>
+          );
+        })}
+      </div>
+      <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
+    </div>
+  );
+}
 
 /* ============================================================
    FOCUS MODE  (timed deep-work session; state lives in the root)

@@ -708,19 +708,19 @@ export const EXAMS = [
   { id: "TOEFL", name: "TOEFL iBT", status: "active", scoring: "0–120 (her bölüm 0–30)",
     skills: ["Reading", "Listening", "Speaking", "Writing"],
     blurb: "Akademik dört beceri; bütünleşik (integrated) konuşma ve yazma görevleri.",
-    modules: ["toeflint", "reading", "listening", "speaking", "writing", "lexical"] },
+    modules: ["toeflint", "reading", "listening", "speaking", "writing", "lexical", "mock"] },
   { id: "YDS", name: "YDS / e-YDS", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Çeviri", "Okuma"],
     blurb: "Tamamen çoktan seçmeli — konuşma/yazma/dinleme YOK. Kelime, gramer, cloze, çeviri (TR↔EN), paragraf tamamlama, anlamca en yakın cümle, akışı bozan cümle, diyalog tamamlama.",
-    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "grammar", "lexical", "articles"] },
-  { id: "YOKDIL", name: "YÖKDİL (Fen · Sağlık · Sosyal)", status: "active", scoring: "0–100 · 80 soru",
+    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "grammar", "lexical", "articles", "mock"] },
+  { id: "YOKDIL", name: "YÖKDİL (Fen · Sağlık · Sosyal)", status: "active", scoring: "0–100 · 80 soru", fieldFilter: true,
     skills: ["Kelime", "Gramer", "Okuma"],
     blurb: "YDS formatına benzer; alanına göre (Fen, Sağlık, Sosyal) terim ağırlıklı. Akademik personel ve TUS/DUS dil şartı için de kullanılır.",
-    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "grammar", "lexical", "articles"] },
+    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "grammar", "lexical", "articles", "mock"] },
   { id: "GENEL", name: "Sıfırdan İngilizce", status: "active", scoring: "CEFR A1→C2",
     skills: ["Gramer", "Kelime", "Dinleme", "Okuma"],
     blurb: "Sınavdan bağımsız temel. Seviye testiyle başla; A1’den ilerle ya da eksik temelini kapat.",
-    modules: ["grammar", "vocab", "listening", "reading"] },
+    modules: ["grammar", "vocab", "listening", "reading", "mock"] },
 ];
 
 /* module registry: maps a module key -> label + which skill/level band it serves */
@@ -736,6 +736,7 @@ export const MODULE_INFO = {
   paracomp: { name: "Paragraf Tamamlama", sub: "YDS · paragraph completion", minLv: "B2" },
   translate:{ name: "Çeviri", sub: "YDS · translation", minLv: "B2" },
   toeflint: { name: "TOEFL Integrated", sub: "oku → dinle → yaz/konuş + AI 0–30 puan", minLv: "B2" },
+  mock:     { name: "Deneme Sınavı", sub: "tam ekran · süreli karışık test", minLv: "B2" },
   reading:  { name: "Deductive Reading Matrix", sub: "T/F/NG · başlık · X-Ray", minLv: "B2" },
   lexical:  { name: "Lexical Arena", sub: "süreli eşanlam atışı", minLv: "B2" },
   syntax:   { name: "Syntax Forge", sub: "cümle kurma · Writing", minLv: "B2" },
@@ -768,7 +769,7 @@ export const ARTICLES = [
     ],
   },
   {
-    id: "a_yawn", lv: "B1", title: "Why We Yawn",
+    id: "a_yawn", lv: "B1", field: "saglik", title: "Why We Yawn",
     body:
       "Almost everyone yawns, and so do many animals, from cats to birds. Yet scientists still do not fully agree on why we do it.\n\n" +
       "For a long time, people believed that yawning brought more oxygen into the body. However, experiments have cast doubt on this idea, because breathing faster does not reliably stop us from yawning.\n\n" +
@@ -781,7 +782,7 @@ export const ARTICLES = [
     ],
   },
   {
-    id: "a_griffin", lv: "B2", title: "The Griffin and the Fossil",
+    id: "a_griffin", lv: "B2", field: "sosyal", title: "The Griffin and the Fossil",
     body:
       "The griffin — a creature with the body of a lion and the head and wings of an eagle — was described by ancient Greek writers as guarding gold in the deserts of Central Asia. For centuries it was dismissed as pure fantasy.\n\n" +
       "In the twentieth century, the folklorist Adrienne Mayor proposed a striking idea. The regions linked to griffin stories are rich in the fossils of Protoceratops, a beaked, four-legged dinosaur whose bones lie exposed in the desert. Mayor suggested that ancient nomads, encountering these remains, may have reconstructed them as a living beast.\n\n" +
@@ -806,7 +807,7 @@ export const ARTICLES = [
 ============================================================ */
 export const CLOZE = [
   {
-    id: "cloze_renewables", lv: "B2", title: "Renewable Energy",
+    id: "cloze_renewables", lv: "B2", field: "fen", title: "Renewable Energy",
     text:
       "Renewable energy now plays a central role in plans to cut carbon emissions. (1) ____ the cost of solar panels has fallen sharply, many households still hesitate to install them. Wind power, (2) ____, has expanded rapidly, and in some countries it already supplies a large share of electricity. Engineers continue to improve battery storage, (3) ____ allows surplus power to be saved for later use. (4) ____ these advances, fossil fuels remain dominant in global energy markets. Governments will need stronger policies (5) ____ the transition is to accelerate.",
     blanks: [
@@ -818,7 +819,7 @@ export const CLOZE = [
     ],
   },
   {
-    id: "cloze_immune", lv: "C1", title: "The Immune System",
+    id: "cloze_immune", lv: "C1", field: "saglik", title: "The Immune System",
     text:
       "The human immune system defends the body against a constant stream of pathogens. When a virus enters the bloodstream, specialised cells (1) ____ it as foreign and begin to respond. Some of these cells produce antibodies, (2) ____ bind to the invader and mark it for destruction. (3) ____ the threat has been cleared, a small population of memory cells remains. (4) ____ these cells, the body can react far more quickly if the same pathogen returns. This principle (5) ____ the basis of modern vaccination.",
     blanks: [
@@ -830,7 +831,7 @@ export const CLOZE = [
     ],
   },
   {
-    id: "cloze_urban", lv: "B2", title: "Life in Cities",
+    id: "cloze_urban", lv: "B2", field: "sosyal", title: "Life in Cities",
     text:
       "More than half of the world's population now lives in cities, and that share keeps rising. People move to urban areas (1) ____ they offer jobs, schools, and healthcare. (2) ____, rapid growth brings serious problems, such as traffic, pollution, and a shortage of affordable housing. Planners argue that public transport must be improved (3) ____ reduce congestion. (4) ____ well-designed parks and squares, residents have few places to relax. Many experts believe that the cities of the future will only succeed (5) ____ they balance growth with quality of life.",
     blanks: [
@@ -839,6 +840,28 @@ export const CLOZE = [
       { n: 3, opts: ["to", "for", "by", "of"], ans: 0, tr: "to + fiil = amaç bildirir; ‘tıkanıklığı azaltmak için’." },
       { n: 4, opts: ["Without", "With", "Besides", "Despite"], ans: 0, tr: "Without = -sız; iyi park olmadan dinlenecek yer az kalır." },
       { n: 5, opts: ["if", "so", "then", "or"], ans: 0, tr: "if = eğer; ‘büyümeyi yaşam kalitesiyle dengelerlerse’ koşulu." },
+    ],
+  },
+  {
+    id: "cloze_language", lv: "C2", field: "sosyal", title: "Language and Thought",
+    text:
+      "The notion that the language we speak shapes the way we think has a long and controversial history. (1) ____ its strongest form, the hypothesis claims that speakers of different languages inhabit genuinely different cognitive worlds. Most contemporary linguists regard this strong version as untenable, (2) ____ they concede that language can exert subtle influences on perception. Recent experiments, (3) ____, suggest that the colours we name and the directions we encode may indeed nudge our judgements, (4) ____ they do not determine them outright.",
+    blanks: [
+      { n: 1, opts: ["In", "On", "At", "By"], ans: 0, tr: "'In its strongest form' = en güçlü hâliyle; kalıplaşmış edat 'in'." },
+      { n: 2, opts: ["even though", "so that", "as if", "in case"], ans: 0, tr: "even though = -e rağmen; güçlü sürümü reddederken etkisini kabul etmeleri zıtlık kurar." },
+      { n: 3, opts: ["for instance", "by contrast", "in conclusion", "on the contrary"], ans: 0, tr: "for instance = örneğin; iddiaya somut bir örnek veriliyor." },
+      { n: 4, opts: ["even if", "whereas", "unless", "provided that"], ans: 0, tr: "even if = -se bile; yargıları etkiler ama belirlemez (ödün verme)." },
+    ],
+  },
+  {
+    id: "cloze_antibiotic", lv: "C2", field: "saglik", title: "Antibiotic Resistance",
+    text:
+      "The rise of antibiotic resistance is, in large part, a consequence of our own success. (1) ____ these drugs became widely available, infections that had once been fatal could be cured within days. Yet the very scale of their use created relentless evolutionary pressure, (2) ____ favouring the rare bacterium able to survive treatment. (3) ____ a resistant strain emerges, it can spread through a population with alarming speed. Researchers now warn that, (4) ____ new classes of antibiotics are developed, routine operations could once again become dangerous.",
+    blanks: [
+      { n: 1, opts: ["Once", "Unless", "Lest", "Whereby"], ans: 0, tr: "Once = -dığında; ilaçlar yaygınlaşınca ölümcül enfeksiyonlar iyileşebildi." },
+      { n: 2, opts: ["thereby", "whereas", "albeit", "insofar"], ans: 0, tr: "thereby = böylelikle; baskının dayanıklı bakteriyi kayırması sonucunu bildirir." },
+      { n: 3, opts: ["Once", "Although", "Unless", "Whether"], ans: 0, tr: "Once = -dığı an; dirençli suş ortaya çıkınca hızla yayılır." },
+      { n: 4, opts: ["unless", "because", "since", "whereas"], ans: 0, tr: "unless = -medikçe; yeni antibiyotikler geliştirilmedikçe ameliyatlar yeniden tehlikeli olabilir." },
     ],
   },
 ];
@@ -853,7 +876,7 @@ export const CLOZE = [
 ============================================================ */
 export const RESTATE = [
   {
-    id: "rs_policy", lv: "B2",
+    id: "rs_policy", lv: "B2", field: "sosyal",
     stem: "Although the policy was controversial, most experts agreed it was necessary.",
     opts: [
       "Most experts opposed the policy because it was controversial.",
@@ -886,7 +909,7 @@ export const RESTATE = [
     tr: "'Unless you make a reservation' = rezervasyon yapmazsan; yani ancak rezervasyon yaparsan masa bulursun. 2. şık koşulu doğru kurar.",
   },
   {
-    id: "rs_vaccine", lv: "B2",
+    id: "rs_vaccine", lv: "B2", field: "saglik",
     stem: "The new vaccine was developed by a small team of researchers in less than a year.",
     opts: [
       "A small team of researchers developed the new vaccine in less than a year.",
@@ -897,7 +920,7 @@ export const RESTATE = [
     tr: "Edilgenin etken karşılığı: küçük bir ekip aşıyı bir yıldan kısa sürede geliştirdi. 0. şık aynı anlamı verir.",
   },
   {
-    id: "rs_manager", lv: "C1",
+    id: "rs_manager", lv: "C1", field: "sosyal",
     stem: "Despite having very little experience, the young manager handled the crisis with remarkable calm.",
     opts: [
       "The young manager stayed calm during the crisis because she was very experienced.",
@@ -908,7 +931,7 @@ export const RESTATE = [
     tr: "'Despite having very little experience … with remarkable calm' = az deneyimine rağmen sakin yönetti. 1. şık (Although) aynı ödünleme anlamını taşır.",
   },
   {
-    id: "rs_fuel", lv: "C1",
+    id: "rs_fuel", lv: "C1", field: "sosyal",
     stem: "The sudden rise in fuel prices forced many small businesses to raise their own prices.",
     opts: [
       "Many small businesses lowered their prices when fuel prices fell.",
@@ -917,6 +940,28 @@ export const RESTATE = [
       "Fuel prices rose because small businesses had increased their prices.",
     ], ans: 2,
     tr: "'sudden rise in fuel prices forced … to raise their own prices' = yakıt zammı işletmeleri fiyat artırmaya zorladı. 2. şık neden-sonucu korur; 4. şık nedeni tersine çevirir.",
+  },
+  {
+    id: "rs_paradigm", lv: "C2", field: "fen",
+    stem: "Far from being a gradual accumulation of facts, scientific progress, Kuhn argued, proceeds through abrupt paradigm shifts that overturn established assumptions.",
+    opts: [
+      "Kuhn maintained that science advances not steadily but through sudden upheavals that displace prevailing assumptions.",
+      "Kuhn believed that science is simply the slow, steady gathering of facts over time.",
+      "According to Kuhn, established assumptions in science are never overturned.",
+      "Kuhn claimed that paradigm shifts make scientific progress impossible.",
+    ], ans: 0,
+    tr: "'Far from being a gradual accumulation … proceeds through abrupt paradigm shifts' = aşamalı birikim değil, yerleşik varsayımları deviren ani paradigma kaymalarıyla ilerler. 1. şık bunu birebir karşılar.",
+  },
+  {
+    id: "rs_regulators", lv: "C2", field: "sosyal",
+    stem: "Had the regulators intervened sooner, the ensuing financial collapse might well have been averted.",
+    opts: [
+      "The regulators intervened early, and so the financial collapse was avoided.",
+      "If the regulators had acted earlier, the financial collapse could probably have been prevented.",
+      "The financial collapse happened because the regulators never existed.",
+      "Even early intervention could not have prevented the collapse.",
+    ], ans: 1,
+    tr: "'Had the regulators intervened sooner … might well have been averted' = devrik 3. tip koşul: daha erken müdahale etselerdi çöküş muhtemelen önlenebilirdi. 2. şık bu koşulu korur.",
   },
 ];
 
@@ -942,7 +987,7 @@ export const ODDOUT = [
     tr: "Paragraf kahve hakkında; IV. cümle Japon çay törenlerinden bahsederek konuyu bozuyor.",
   },
   {
-    id: "oo_photosynthesis", lv: "B2",
+    id: "oo_photosynthesis", lv: "B2", field: "fen",
     sentences: [
       "Photosynthesis is the process by which green plants make their own food.",
       "During this process, plants absorb carbon dioxide and release oxygen.",
@@ -953,7 +998,7 @@ export const ODDOUT = [
     tr: "Paragraf fotosentez hakkında; IV. cümle büyükannenin resim hobisinden söz ederek akışı bozuyor.",
   },
   {
-    id: "oo_rome", lv: "B2",
+    id: "oo_rome", lv: "B2", field: "sosyal",
     sentences: [
       "The Roman Empire was one of the largest empires in ancient history.",
       "At its height, it controlled territory across Europe, North Africa, and the Middle East.",
@@ -964,7 +1009,7 @@ export const ODDOUT = [
     tr: "Paragraf Roma İmparatorluğu hakkında; V. cümle akıllı telefonlardan bahsederek tarihsel akışı bozuyor.",
   },
   {
-    id: "oo_recycling", lv: "B2",
+    id: "oo_recycling", lv: "B2", field: "fen",
     sentences: [
       "Recycling helps reduce the amount of waste that ends up in landfills.",
       "It also saves energy, since making products from recycled materials often uses less power.",
@@ -975,7 +1020,7 @@ export const ODDOUT = [
     tr: "Paragraf geri dönüşüm hakkında; IV. cümle Mısır piramitlerini anlatarak konuyu bozuyor.",
   },
   {
-    id: "oo_sleep", lv: "C1",
+    id: "oo_sleep", lv: "C1", field: "saglik",
     sentences: [
       "Sleep plays a vital role in maintaining both physical and mental health.",
       "During deep sleep, the body repairs tissues and strengthens the immune system.",
@@ -986,7 +1031,7 @@ export const ODDOUT = [
     tr: "Paragraf uyku ve sağlık hakkında; V. cümle borsa dalgalanmalarından söz ederek akışı bozuyor.",
   },
   {
-    id: "oo_volcano", lv: "C1",
+    id: "oo_volcano", lv: "C1", field: "fen",
     sentences: [
       "Volcanoes form when molten rock from deep within the Earth rises to the surface.",
       "When a volcano erupts, it can release ash, gas, and flowing lava.",
@@ -1007,7 +1052,7 @@ export const ODDOUT = [
 ============================================================ */
 export const DIALOGUE = [
   {
-    id: "dlg_museum", lv: "B2",
+    id: "dlg_museum", lv: "B2", field: "sosyal",
     lines: [
       { sp: "A", t: "I was thinking of visiting the new art museum this weekend." },
       { sp: "B", t: "____" },
@@ -1022,7 +1067,7 @@ export const DIALOGUE = [
     tr: "A öneri yapıyor; B'nin yanıtı olumlu olmalı ve A'nın 'Saturday' demesine zemin kurmalı. 2. şık akışı sağlıyor.",
   },
   {
-    id: "dlg_doctor", lv: "B2",
+    id: "dlg_doctor", lv: "B2", field: "saglik",
     lines: [
       { sp: "A", t: "Doctor, I've had a sore throat and a mild fever since yesterday." },
       { sp: "B", t: "____" },
@@ -1037,7 +1082,7 @@ export const DIALOGUE = [
     tr: "B doktor; A 'No, just some tea… I wanted to see you first' diyor → B ilaç alıp almadığını sormuş olmalı. 1. şık akışı kurar.",
   },
   {
-    id: "dlg_lab", lv: "C1",
+    id: "dlg_lab", lv: "C1", field: "fen",
     lines: [
       { sp: "A", t: "Did the experiment confirm your hypothesis?" },
       { sp: "B", t: "____" },
@@ -1067,7 +1112,7 @@ export const DIALOGUE = [
     tr: "A yer soruyor ve 'I'll go up there now' diyor → B konum tarif etmeli. 3. şık katı/bölümü verir.",
   },
   {
-    id: "dlg_environment", lv: "C1",
+    id: "dlg_environment", lv: "C1", field: "fen",
     lines: [
       { sp: "A", t: "Our city is finally introducing a recycling programme next month." },
       { sp: "B", t: "____" },
@@ -1082,7 +1127,7 @@ export const DIALOGUE = [
     tr: "A 'Exactly, and it should also cut down on landfill waste' diyerek B'yi onaylıyor → B olumlu ve konuyla ilgili olmalı. 2. şık akışı sağlar.",
   },
   {
-    id: "dlg_interview", lv: "C1",
+    id: "dlg_interview", lv: "C1", field: "sosyal",
     lines: [
       { sp: "A", t: "Why do you think you're the right candidate for this position?" },
       { sp: "B", t: "____" },
@@ -1108,7 +1153,7 @@ export const DIALOGUE = [
 ============================================================ */
 export const PARACOMP = [
   {
-    id: "pc_sleep", lv: "B2",
+    id: "pc_sleep", lv: "B2", field: "saglik",
     text: "Sleep plays a vital role in good health. ---- During deep sleep, the body repairs tissues and strengthens the immune system. Without enough rest, both physical and mental performance decline.",
     opts: [
       "However, many people enjoy staying up late.",
@@ -1119,7 +1164,7 @@ export const PARACOMP = [
     tr: "---- yeri uykunun işlevini açıklayan bir cümle bekliyor; 2. şık öncesi/sonrasıyla tutarlı.",
   },
   {
-    id: "pc_photosynthesis", lv: "B2",
+    id: "pc_photosynthesis", lv: "B2", field: "fen",
     text: "---- During this process, they take in carbon dioxide and release oxygen into the air. This exchange is essential for the survival of most living things.",
     opts: [
       "Photosynthesis is the process by which green plants produce their own food using sunlight.",
@@ -1130,7 +1175,7 @@ export const PARACOMP = [
     tr: "Paragraf fotosentezi anlatıyor; baştaki ---- konuyu tanıtan cümle ister. 1. şık süreci tanıtır.",
   },
   {
-    id: "pc_vaccine", lv: "C1",
+    id: "pc_vaccine", lv: "C1", field: "saglik",
     text: "Vaccines work by training the immune system to recognise a specific pathogen. They contain harmless parts of the germ, which prompt the body to produce antibodies. ----",
     opts: [
       "However, most people dislike going to the dentist.",
@@ -1141,7 +1186,7 @@ export const PARACOMP = [
     tr: "Önceki cümleler antikor üretimini anlatıyor; sondaki ---- bunun sonucunu bağlamalı. 3. şık 'As a result…' ile sonucu verir.",
   },
   {
-    id: "pc_internet", lv: "B2",
+    id: "pc_internet", lv: "B2", field: "sosyal",
     text: "The internet has transformed the way people communicate. ---- Today, a message can reach the other side of the world in seconds. Still, some worry that face-to-face contact is being lost.",
     opts: [
       "Bananas are a good source of potassium.",
@@ -1152,7 +1197,7 @@ export const PARACOMP = [
     tr: "Ortadaki ---- 'Today, a message…' ile karşılaştırma kuruyor; geçmişe gönderme yapan 4. şık tutarlı.",
   },
   {
-    id: "pc_climate", lv: "C1",
+    id: "pc_climate", lv: "C1", field: "fen",
     text: "Climate change is already affecting ecosystems around the globe. ---- For instance, warmer seas are pushing many fish species towards cooler waters. Such shifts can disrupt both food chains and local fishing industries.",
     opts: [
       "Chess is a game that requires deep concentration.",
@@ -1163,7 +1208,7 @@ export const PARACOMP = [
     tr: "---- ardından 'For instance, warmer seas…' örneği geliyor → öncesinde genel bir iddia olmalı. 2. şık sıcaklığın canlı dağılımını değiştirdiğini söyler.",
   },
   {
-    id: "pc_exercise", lv: "C1",
+    id: "pc_exercise", lv: "C1", field: "saglik",
     text: "Regular physical exercise offers a wide range of benefits. It strengthens the heart, improves mood, and helps control body weight. ----",
     opts: [
       "For these reasons, doctors encourage people to stay active throughout their lives.",
@@ -1172,6 +1217,17 @@ export const PARACOMP = [
       "Glass is made mainly from sand at high temperatures.",
     ], ans: 0,
     tr: "Paragraf egzersizin yararlarını sıralıyor; sondaki ---- toparlayan bir sonuç ister. 1. şık 'For these reasons…' ile özetler.",
+  },
+  {
+    id: "pc_behavioural", lv: "C2", field: "sosyal",
+    text: "Classical economics long assumed that individuals act as rational agents, coolly weighing every cost and benefit. ---- They have shown that people systematically deviate from such ideal rationality, relying on mental shortcuts that frequently lead them astray. These insights have since reshaped fields ranging from finance to public policy.",
+    opts: [
+      "Behavioural economists, however, have mounted a powerful challenge to this comfortable assumption.",
+      "Most people enjoy a hot cup of coffee first thing in the morning.",
+      "The history of metal coins stretches back several thousand years.",
+      "Mountain ranges tend to form along the boundaries of tectonic plates.",
+    ], ans: 0,
+    tr: "---- öncesi 'rasyonel ajan' varsayımını, sonrası bu varsayımdan 'sistematik sapma' bulgularını anlatıyor → arada varsayıma itiraz eden özne tanıtılmalı. 1. şık davranışsal iktisatçıları getirir.",
   },
 ];
 
@@ -1185,7 +1241,7 @@ export const PARACOMP = [
 ============================================================ */
 export const TRANSLATE = [
   {
-    id: "tr_emissions", lv: "B2", dir: "en2tr",
+    id: "tr_emissions", lv: "B2", field: "fen", dir: "en2tr",
     source: "The government introduced new measures to reduce carbon emissions.",
     opts: [
       "Hükümet karbon emisyonlarını artırmak için yeni önlemler aldı.",
@@ -1196,7 +1252,7 @@ export const TRANSLATE = [
     tr: "'reduce carbon emissions' = azaltmak; 2. şık doğru, 1. şık anlamı tersine çeviriyor.",
   },
   {
-    id: "tr_research", lv: "B2", dir: "en2tr",
+    id: "tr_research", lv: "B2", field: "fen", dir: "en2tr",
     source: "Scientists have discovered a new species of frog in the rainforest.",
     opts: [
       "Bilim insanları yağmur ormanında yeni bir kurbağa türü keşfetti.",
@@ -1207,7 +1263,7 @@ export const TRANSLATE = [
     tr: "'discovered a new species' = yeni bir tür keşfetti; 1. şık doğru, 2. şık 'yok etti' ile anlamı bozar.",
   },
   {
-    id: "tr_health", lv: "B2", dir: "en2tr",
+    id: "tr_health", lv: "B2", field: "saglik", dir: "en2tr",
     source: "Doctors recommend drinking plenty of water during hot weather.",
     opts: [
       "Doktorlar sıcak havalarda su içmemeyi önerir.",
@@ -1218,7 +1274,7 @@ export const TRANSLATE = [
     tr: "'recommend drinking plenty of water during hot weather' = sıcak havada bol su içmeyi önerir; 3. şık doğru.",
   },
   {
-    id: "tr_history", lv: "C1", dir: "tr2en",
+    id: "tr_history", lv: "C1", field: "sosyal", dir: "tr2en",
     source: "Bu antik kent, yüzyıllar boyunca önemli bir ticaret merkezi olmuştur.",
     opts: [
       "This ancient city has remained an important trade centre for centuries.",
@@ -1229,7 +1285,7 @@ export const TRANSLATE = [
     tr: "'yüzyıllar boyunca önemli bir ticaret merkezi olmuştur' = has remained an important trade centre for centuries; 1. şık doğru.",
   },
   {
-    id: "tr_economy", lv: "C1", dir: "tr2en",
+    id: "tr_economy", lv: "C1", field: "sosyal", dir: "tr2en",
     source: "Hükümet, işsizliği azaltmak için yeni iş olanakları yaratmayı amaçlıyor.",
     opts: [
       "The government plans to increase unemployment by cutting jobs.",
@@ -1240,7 +1296,7 @@ export const TRANSLATE = [
     tr: "'işsizliği azaltmak için yeni iş olanakları yaratmayı amaçlıyor' = aims to create new jobs to reduce unemployment; 2. şık doğru.",
   },
   {
-    id: "tr_biology", lv: "B2", dir: "en2tr",
+    id: "tr_biology", lv: "B2", field: "saglik", dir: "en2tr",
     source: "The human brain uses a large amount of energy even during rest.",
     opts: [
       "İnsan beyni yalnızca uyurken enerji kullanır.",
@@ -1249,6 +1305,17 @@ export const TRANSLATE = [
       "İnsan beyni dinlenirken bile büyük miktarda enerji kullanır.",
     ], ans: 3,
     tr: "'even during rest' = dinlenirken bile; 4. şık doğru, 1. şık 'yalnızca uyurken' ile anlamı daraltır.",
+  },
+  {
+    id: "tr_jurisprudence", lv: "C2", field: "sosyal", dir: "en2tr",
+    source: "The court held that the legislation, however well-intentioned, exceeded the powers conferred upon parliament by the constitution.",
+    opts: [
+      "Mahkeme, yasanın -ne kadar iyi niyetli olursa olsun- anayasanın parlamentoya verdiği yetkileri aştığına hükmetti.",
+      "Mahkeme, iyi niyetli yasanın anayasaya tümüyle uygun olduğunu söyledi.",
+      "Parlamento, mahkemenin anayasayı aşan kararını iyi niyetle onayladı.",
+      "Anayasa, mahkemeye parlamentoyu denetleme yetkisi vermedi.",
+    ], ans: 0,
+    tr: "'however well-intentioned, exceeded the powers conferred upon parliament' = ne kadar iyi niyetli olsa da parlamentoya verilen yetkileri aştı; 'held' = hükmetti. 1. şık doğru.",
   },
 ];
 
