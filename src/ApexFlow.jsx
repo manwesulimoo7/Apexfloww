@@ -9,7 +9,7 @@ import { useStore, loadExternalContent, CONTENT_URL } from "./lib.js";
 import {
   TopHUD, Catalog, Placement, VocabReview, GrammarHub,
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
-  SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, FocusBar,
+  SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, OddoutRoom, FocusBar,
 } from "./modules.jsx";
 
 export default function ApexFlow() {
@@ -124,6 +124,7 @@ export default function ApexFlow() {
         {view === "articles" && <ArticleRoom level={level} store={store} award={award} onBack={home} />}
         {view === "cloze" && <ClozeRoom level={level} store={store} award={award} onBack={home} />}
         {view === "restate" && <RestateRoom level={level} store={store} award={award} onBack={home} />}
+        {view === "oddout" && <OddoutRoom level={level} store={store} award={award} onBack={home} />}
         {view === "writing" && <WritingStudio level={level} store={store} award={award} onBack={home} />}
         {view === "reading" && <ReadingMatrix onBack={home} award={award} />}
         {view === "lexical" && <LexicalArena onBack={home} award={award} />}

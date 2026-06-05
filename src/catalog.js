@@ -712,11 +712,11 @@ export const EXAMS = [
   { id: "YDS", name: "YDS / e-YDS", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Çeviri", "Okuma"],
     blurb: "Tamamen çoktan seçmeli — konuşma/yazma/dinleme YOK. Kelime, gramer, cloze, çeviri (TR↔EN), paragraf tamamlama, anlamca en yakın cümle, akışı bozan cümle, diyalog tamamlama.",
-    modules: ["cloze", "restate", "grammar", "lexical", "articles"] },
+    modules: ["cloze", "restate", "oddout", "grammar", "lexical", "articles"] },
   { id: "YOKDIL", name: "YÖKDİL (Fen · Sağlık · Sosyal)", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Okuma"],
     blurb: "YDS formatına benzer; alanına göre (Fen, Sağlık, Sosyal) terim ağırlıklı. Akademik personel ve TUS/DUS dil şartı için de kullanılır.",
-    modules: ["cloze", "restate", "grammar", "lexical", "articles"] },
+    modules: ["cloze", "restate", "oddout", "grammar", "lexical", "articles"] },
   { id: "GENEL", name: "Sıfırdan İngilizce", status: "active", scoring: "CEFR A1→C2",
     skills: ["Gramer", "Kelime", "Dinleme", "Okuma"],
     blurb: "Sınavdan bağımsız temel. Seviye testiyle başla; A1’den ilerle ya da eksik temelini kapat.",
@@ -731,6 +731,7 @@ export const MODULE_INFO = {
   articles: { name: "Okuma Parçaları", sub: "makale + sorular (kolay format)", minLv: "A2" },
   cloze:    { name: "Boşluk Doldurma", sub: "YDS/YÖKDİL cloze", minLv: "B2" },
   restate:  { name: "Anlamca En Yakın Cümle", sub: "YDS · restatement", minLv: "B2" },
+  oddout:   { name: "Akışı Bozan Cümle", sub: "YDS · irrelevant sentence", minLv: "B2" },
   reading:  { name: "Deductive Reading Matrix", sub: "T/F/NG · başlık · X-Ray", minLv: "B2" },
   lexical:  { name: "Lexical Arena", sub: "süreli eşanlam atışı", minLv: "B2" },
   syntax:   { name: "Syntax Forge", sub: "cümle kurma · Writing", minLv: "B2" },
@@ -912,5 +913,83 @@ export const RESTATE = [
       "Fuel prices rose because small businesses had increased their prices.",
     ], ans: 2,
     tr: "'sudden rise in fuel prices forced … to raise their own prices' = yakıt zammı işletmeleri fiyat artırmaya zorladı. 2. şık neden-sonucu korur; 4. şık nedeni tersine çevirir.",
+  },
+];
+
+/* ============================================================
+   ODDOUT — irrelevant / flow-breaking sentence (YDS).
+   A short paragraph of numbered sentences (I, II, III…); one
+   sentence breaks the topic/flow. Options = sentence numbers.
+   Reuses the shared MCQRunner. Also mergeable from content.json
+   (data.oddout).
+   Schema: { id, lv, sentences:[…4-5…], ans, tr }
+   ans starts at 0 (0 = sentence I); tr = short Turkish rationale.
+============================================================ */
+export const ODDOUT = [
+  {
+    id: "oo_coffee", lv: "B2",
+    sentences: [
+      "Coffee is one of the most widely consumed beverages in the world.",
+      "It contains caffeine, a natural stimulant that increases alertness.",
+      "Many people drink it in the morning to help them wake up.",
+      "Tea ceremonies have a long and important history in Japan.",
+      "Moderate coffee consumption has also been linked to certain health benefits.",
+    ], ans: 3,
+    tr: "Paragraf kahve hakkında; IV. cümle Japon çay törenlerinden bahsederek konuyu bozuyor.",
+  },
+  {
+    id: "oo_photosynthesis", lv: "B2",
+    sentences: [
+      "Photosynthesis is the process by which green plants make their own food.",
+      "During this process, plants absorb carbon dioxide and release oxygen.",
+      "Sunlight provides the energy needed to turn water and carbon dioxide into sugars.",
+      "My grandmother enjoys painting landscapes in her free time.",
+      "Without photosynthesis, most life on Earth could not survive.",
+    ], ans: 3,
+    tr: "Paragraf fotosentez hakkında; IV. cümle büyükannenin resim hobisinden söz ederek akışı bozuyor.",
+  },
+  {
+    id: "oo_rome", lv: "B2",
+    sentences: [
+      "The Roman Empire was one of the largest empires in ancient history.",
+      "At its height, it controlled territory across Europe, North Africa, and the Middle East.",
+      "Romans built an extensive network of roads to move armies and goods quickly.",
+      "Their system of law influenced many modern legal traditions.",
+      "Smartphones have completely changed the way teenagers communicate today.",
+    ], ans: 4,
+    tr: "Paragraf Roma İmparatorluğu hakkında; V. cümle akıllı telefonlardan bahsederek tarihsel akışı bozuyor.",
+  },
+  {
+    id: "oo_recycling", lv: "B2",
+    sentences: [
+      "Recycling helps reduce the amount of waste that ends up in landfills.",
+      "It also saves energy, since making products from recycled materials often uses less power.",
+      "Many cities now provide separate bins for paper, glass, and plastic.",
+      "The ancient Egyptians built enormous pyramids as tombs for their pharaohs.",
+      "By recycling, individuals can play a small but real part in protecting the environment.",
+    ], ans: 3,
+    tr: "Paragraf geri dönüşüm hakkında; IV. cümle Mısır piramitlerini anlatarak konuyu bozuyor.",
+  },
+  {
+    id: "oo_sleep", lv: "C1",
+    sentences: [
+      "Sleep plays a vital role in maintaining both physical and mental health.",
+      "During deep sleep, the body repairs tissues and strengthens the immune system.",
+      "Researchers have found that poor sleep is linked to problems with memory and concentration.",
+      "Most experts recommend that adults get between seven and nine hours of sleep each night.",
+      "The stock market experienced sharp fluctuations throughout the past financial year.",
+    ], ans: 4,
+    tr: "Paragraf uyku ve sağlık hakkında; V. cümle borsa dalgalanmalarından söz ederek akışı bozuyor.",
+  },
+  {
+    id: "oo_volcano", lv: "C1",
+    sentences: [
+      "Volcanoes form when molten rock from deep within the Earth rises to the surface.",
+      "When a volcano erupts, it can release ash, gas, and flowing lava.",
+      "Some eruptions are so powerful that they affect the global climate for years.",
+      "Despite the dangers, volcanic soil is often extremely fertile for farming.",
+      "She had always dreamed of becoming a professional violinist.",
+    ], ans: 4,
+    tr: "Paragraf yanardağlar hakkında; V. cümle profesyonel kemancı olma hayalinden bahsederek konuyu bozuyor.",
   },
 ];

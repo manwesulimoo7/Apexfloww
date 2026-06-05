@@ -2,7 +2,7 @@
    APEXFLOW :: LIB  (engine — state, persistence, SRS, speech)
 ============================================================ */
 import { useState, useEffect, useRef, useCallback } from "react";
-import { BANDS, VOCAB, LISTENING, ARTICLES, CLOZE, RESTATE, GRAMMAR, WRITING } from "./catalog.js";
+import { BANDS, VOCAB, LISTENING, ARTICLES, CLOZE, RESTATE, ODDOUT, GRAMMAR, WRITING } from "./catalog.js";
 
 /* ---------- band / score concordance ---------- */
 export function tierFor(xp) {
@@ -323,6 +323,9 @@ const _validCloze = (c) => _isStr(c.id) && _isStr(c.lv) && _isStr(c.title) && _i
 const _validRestate = (r) => _isStr(r.id) && _isStr(r.lv) && _isStr(r.stem) &&
   Array.isArray(r.opts) && r.opts.length >= 2 &&
   Number.isInteger(r.ans) && r.ans >= 0 && r.ans < r.opts.length;
+const _validOddout = (o) => _isStr(o.id) && _isStr(o.lv) &&
+  Array.isArray(o.sentences) && o.sentences.length >= 2 && o.sentences.every(_isStr) &&
+  Number.isInteger(o.ans) && o.ans >= 0 && o.ans < o.sentences.length;
 const _validGrammar = (g) => _isStr(g.id) && _isStr(g.lv) && _isStr(g.title) && _isStr(g.exp) && _validItems(g.items);
 const _validWriting = (w) => _isStr(w.id) && _isStr(w.lv) && _isStr(w.type) && _isStr(w.prompt) && Number.isInteger(w.minWords);
 
@@ -338,7 +341,7 @@ function mergeById(target, incoming, validate) {
 
 // fetch + merge; mutates the catalog arrays in place (modules read them live)
 export async function loadExternalContent(url) {
-  const report = { vocab: 0, listening: 0, articles: 0, cloze: 0, restate: 0, grammar: 0, writing: 0, total: 0, error: null };
+  const report = { vocab: 0, listening: 0, articles: 0, cloze: 0, restate: 0, oddout: 0, grammar: 0, writing: 0, total: 0, error: null };
   if (!url) { report.error = "no-url"; return report; }
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -349,9 +352,10 @@ export async function loadExternalContent(url) {
     report.articles = mergeById(ARTICLES, data.articles, _validArticle);
     report.cloze = mergeById(CLOZE, data.cloze, _validCloze);
     report.restate = mergeById(RESTATE, data.restate, _validRestate);
+    report.oddout = mergeById(ODDOUT, data.oddout, _validOddout);
     report.grammar = mergeById(GRAMMAR, data.grammar, _validGrammar);
     report.writing = mergeById(WRITING, data.writing, _validWriting);
-    report.total = report.vocab + report.listening + report.articles + report.cloze + report.restate + report.grammar + report.writing;
+    report.total = report.vocab + report.listening + report.articles + report.cloze + report.restate + report.oddout + report.grammar + report.writing;
   } catch (e) { report.error = (e && e.message) || "yükleme hatası"; }
   return report;
 }

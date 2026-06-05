@@ -630,6 +630,12 @@ export function Styles() {
 /* ===== restate (closest-in-meaning sentence) ===== */
 .af-card-icon.af-ic-restate{color:#f472b6;background:rgba(244,114,182,.12);}
 .af-restate-hint{display:flex;align-items:center;gap:6px;margin-top:16px;color:var(--txt2);font-size:12.5px;font-family:var(--mono);}
+
+/* ===== oddout (irrelevant sentence) ===== */
+.af-card-icon.af-ic-oddout{color:#fbbf24;background:rgba(251,191,36,.12);}
+.af-oddout{display:flex;flex-direction:column;gap:9px;}
+.af-oddout-s{color:var(--txt);font-size:15px;line-height:1.7;font-family:var(--serif);margin:0;display:flex;gap:9px;align-items:baseline;}
+.af-oddout-n{flex:none;min-width:28px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--em-b);}
 .af-content-foot{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;}
 .af-content-reload{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line2);color:var(--txt2);border-radius:8px;padding:5px 10px;font-size:11.5px;cursor:pointer;font-family:var(--mono);}
 .af-content-reload:hover{border-color:var(--em-d);color:var(--em-b);}

@@ -5,13 +5,13 @@ import {
   Scan, Gauge, TrendingUp, Lightbulb, Home as HomeIcon, ChevronLeft,
   Crosshair, Sparkles, Volume2, RefreshCw, GraduationCap, PenLine,
   ListChecks, Languages, BookMarked, Headphones, Repeat, Star, Lock,
-  ChevronRight, RotateCw, Trophy, Pause, Sun, Moon, FileText, Replace,
+  ChevronRight, RotateCw, Trophy, Pause, Sun, Moon, FileText, Replace, Filter,
 } from "lucide-react";
 import { tierFor, speak, stopSpeak, speechSupported, reviewQueue, analyzeWriting, scoreWithAI } from "./lib.js";
 import {
   LEXICAL, PASSAGES, SYNTAX, SPEAKING,
   LEVELS, LV_ORDER, lvIndex, levelMeta,
-  PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES, CLOZE, RESTATE,
+  PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES, CLOZE, RESTATE, ODDOUT,
   EXAMS, MODULE_INFO,
 } from "./catalog.js";
 
@@ -849,7 +849,7 @@ const MODULE_ICON = {
   listening: <Headphones size={20} />, articles: <BookMarked size={20} />, reading: <BookOpen size={20} />,
   lexical: <Crosshair size={20} />, syntax: <Hammer size={20} />,
   speaking: <Mic size={20} />, writing: <PenLine size={20} />, cloze: <FileText size={20} />,
-  restate: <Replace size={20} />,
+  restate: <Replace size={20} />, oddout: <Filter size={20} />,
 };
 function ModuleCard({ k, ctx, go, done }) {
   const info = MODULE_INFO[k];
@@ -1744,6 +1744,63 @@ export function RestateRoom({ level, store, award, onBack }) {
             <div className="af-result-cap">RESTATEMENT TAMAM</div>
             <div className="af-result-lv">{score}/{items.length}</div>
             <p className="af-result-blurb">Yanlışlarında köprü yapıyı (zıtlık, neden-sonuç, koşul, edilgen) tekrar gözden geçir.</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+
+/* ============================================================
+   ODDOUT  (irrelevant / flow-breaking sentence — YDS)
+   Numbered paragraph (I, II, III…); pick the off-topic sentence.
+   Options = sentence numbers; reuses the shared MCQRunner.
+============================================================ */
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+export function OddoutRoom({ level, store, award, onBack }) {
+  const items = useMemo(() => {
+    const f = ODDOUT.filter((o) => !level || lvIndex(o.lv) <= lvIndex(level));
+    return f.length ? f : ODDOUT;
+  }, [level]);
+  const quizItems = useMemo(
+    () => items.map((o) => ({
+      q: (
+        <div className="af-oddout">
+          {o.sentences.map((s, i) => (
+            <p key={i} className="af-oddout-s"><span className="af-oddout-n">{ROMAN[i]}</span>{s}</p>
+          ))}
+        </div>
+      ),
+      opts: o.sentences.map((_, i) => ROMAN[i] + ". cümle"),
+      ans: o.ans,
+      tr: o.tr,
+    })),
+    [items]
+  );
+  const [phase, setPhase] = useState("quiz"); // quiz -> done
+  const [score, setScore] = useState(0);
+  return (
+    <>
+      <ModuleBar title="Akışı Bozan Cümle" sub="YDS · irrelevant sentence" onBack={onBack} />
+      <div className="af-substage">
+        {ODDOUT.length === 0 ? (
+          <div className="af-empty"><AlertTriangle size={14} /> Henüz paragraf yok — içerik kaynağından (content.json) eklenebilir.</div>
+        ) : phase === "quiz" ? (
+          <MCQRunner items={quizItems} award={award} points={16}
+            footer={<div className="af-restate-hint"><Filter size={13} /> Paragrafın konusuna/akışına uymayan cümleyi seç.</div>}
+            onFinish={(ok) => {
+              setScore(ok);
+              items.forEach((o) => store.markDone("oddout:" + o.id));
+              store.touchStreak();
+              setPhase("done");
+            }} />
+        ) : (
+          <div className="af-result">
+            <div className="af-result-cap">TAMAM</div>
+            <div className="af-result-lv">{score}/{items.length}</div>
+            <p className="af-result-blurb">İpucu: paragrafın ana konusunu belirle; o konuya katkı yapmayan, başka bir alana kayan cümle akışı bozar.</p>
             <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
           </div>
         )}
