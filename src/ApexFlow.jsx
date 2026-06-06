@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from "react";
 import { Styles } from "./styles.jsx";
 import { useStore, loadExternalContent, CONTENT_URL } from "./lib.js";
 import {
-  TopHUD, Catalog, Placement, VocabReview, GrammarHub,
+  TopHUD, Catalog, Placement, VocabReview, WordListRoom, GrammarHub,
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
   SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, OddoutRoom,
   DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, MockRoom, FocusBar,
@@ -128,6 +128,7 @@ export default function ApexFlow() {
       <div className="af-stage">
         {view === "catalog" && <Catalog store={store} go={go} content={{ msg: contentMsg, reload: reloadContent }} onFocus={startFocus} />}
         {view === "vocab" && <VocabReview store={store} onBack={home} />}
+        {view === "wordlist" && <WordListRoom store={store} onBack={home} />}
         {view === "grammar" && <GrammarHub level={level} store={store} award={award} onBack={home} />}
         {view === "listening" && <ListeningRoom level={level} store={store} award={award} onBack={home} />}
         {view === "articles" && <ArticleRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
