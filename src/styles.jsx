@@ -673,6 +673,31 @@ export function Styles() {
 .af-ti-aimode{font-family:var(--mono);font-size:11.5px;color:var(--txt2);}
 .af-ti-feedback{white-space:pre-wrap;text-align:left;margin-top:14px;}
 
+/* ===== paraphrase (rewrite) ===== */
+.af-card-icon.af-ic-paraphrase{color:#22d3ee;background:rgba(34,211,238,.12);}
+.af-pp-sample{margin-top:14px;text-align:left;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;color:var(--txt);font-size:14px;line-height:1.6;font-family:var(--serif);}
+
+/* ===== error hunt (click-to-find) ===== */
+.af-card-icon.af-ic-errorhunt{color:#f97316;background:rgba(249,115,22,.12);}
+.af-eh-note{display:flex;align-items:center;gap:7px;color:var(--txt2);font-size:13px;line-height:1.5;margin-bottom:14px;font-family:var(--mono);}
+.af-eh-text{font-size:17px;line-height:2.1;font-family:var(--serif);color:var(--txt);max-width:680px;margin:0 0 18px;}
+.af-eh-w{cursor:pointer;padding:1px 3px;border-radius:5px;border-bottom:2px solid transparent;transition:background .12s;}
+.af-eh-w:hover{background:var(--panel2);}
+.af-eh-w.is-sel{background:rgba(56,189,248,.18);border-bottom-color:var(--sky);}
+.af-eh-w.is-found{background:rgba(16,185,129,.20);border-bottom-color:var(--em-b);color:var(--txt);}
+.af-eh-w.is-wrong{background:rgba(244,63,94,.18);border-bottom-color:var(--crim);text-decoration:line-through;}
+.af-eh-w.is-missed{background:rgba(251,191,36,.18);border-bottom-color:var(--gold);}
+.af-eh-result{margin-top:4px;}
+.af-eh-result .af-result-cap{margin-bottom:12px;}
+.af-eh-explain{display:flex;flex-direction:column;gap:9px;text-align:left;margin-bottom:16px;}
+.af-eh-exrow{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;line-height:1.5;color:var(--txt2);background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:10px 12px;}
+.af-eh-exrow.is-ok{border-color:rgba(16,185,129,.35);}
+.af-eh-exrow.is-no{border-color:rgba(244,63,94,.30);}
+.af-eh-exic{flex:none;margin-top:2px;}
+.af-eh-exic.is-ok{color:var(--em-b);}
+.af-eh-exic.is-no{color:var(--crim);}
+.af-eh-fix{color:var(--em-b);}
+
 /* ===== placement: skip / level-pick ===== */
 .af-place-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 .af-place-actions .af-q-next{flex:1;}

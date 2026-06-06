@@ -708,15 +708,15 @@ export const EXAMS = [
   { id: "TOEFL", name: "TOEFL iBT", status: "active", scoring: "0–120 (her bölüm 0–30)",
     skills: ["Reading", "Listening", "Speaking", "Writing"],
     blurb: "Akademik dört beceri; bütünleşik (integrated) konuşma ve yazma görevleri.",
-    modules: ["toeflint", "reading", "listening", "speaking", "writing", "lexical", "mock"] },
+    modules: ["toeflint", "paraphrase", "errorhunt", "reading", "listening", "speaking", "writing", "lexical", "mock"] },
   { id: "YDS", name: "YDS / e-YDS", status: "active", scoring: "0–100 · 80 soru",
     skills: ["Kelime", "Gramer", "Çeviri", "Okuma"],
     blurb: "Tamamen çoktan seçmeli — konuşma/yazma/dinleme YOK. Kelime, gramer, cloze, çeviri (TR↔EN), paragraf tamamlama, anlamca en yakın cümle, akışı bozan cümle, diyalog tamamlama.",
-    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "grammar", "lexical", "articles", "mock"] },
+    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "errorhunt", "grammar", "lexical", "articles", "mock"] },
   { id: "YOKDIL", name: "YÖKDİL (Fen · Sağlık · Sosyal)", status: "active", scoring: "0–100 · 80 soru", fieldFilter: true,
     skills: ["Kelime", "Gramer", "Okuma"],
     blurb: "YDS formatına benzer; alanına göre (Fen, Sağlık, Sosyal) terim ağırlıklı. Akademik personel ve TUS/DUS dil şartı için de kullanılır.",
-    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "grammar", "lexical", "articles", "mock"] },
+    modules: ["cloze", "restate", "oddout", "dialogue", "paracomp", "translate", "errorhunt", "grammar", "lexical", "articles", "mock"] },
   { id: "GENEL", name: "Sıfırdan İngilizce", status: "active", scoring: "CEFR A1→C2",
     skills: ["Gramer", "Kelime", "Dinleme", "Okuma"],
     blurb: "Sınavdan bağımsız temel. Seviye testiyle başla; A1’den ilerle ya da eksik temelini kapat.",
@@ -738,6 +738,8 @@ export const MODULE_INFO = {
   translate:{ name: "Çeviri", sub: "YDS · translation", minLv: "B2" },
   toeflint: { name: "TOEFL Integrated", sub: "oku → dinle → yaz/konuş + AI 0–30 puan", minLv: "B2" },
   mock:     { name: "Deneme Sınavı", sub: "tam ekran · süreli karışık test", minLv: "B2" },
+  paraphrase:{ name: "Yeniden Yazım", sub: "C1 cümleyi yapısını değiştirerek kur", minLv: "B2" },
+  errorhunt: { name: "Hata Avcısı", sub: "paragraftaki gizli gramer hatalarını bul", minLv: "B2" },
   reading:  { name: "Deductive Reading Matrix", sub: "T/F/NG · başlık · X-Ray", minLv: "B2" },
   lexical:  { name: "Lexical Arena", sub: "süreli eşanlam atışı", minLv: "B2" },
   syntax:   { name: "Syntax Forge", sub: "cümle kurma · Writing", minLv: "B2" },
@@ -1398,6 +1400,114 @@ export const TOEFL_INTEGRATED = [
       "Adam karara karşı çıkıyor — bunun kötü bir karar olduğunu düşünüyor.",
       "1. neden: 'çok az öğrenci kullanıyor' iddiası yanlış — özellikle sınav dönemlerinde otobüs tıklım tıklım ve öğrenciler gece geç saatte eve dönmek için ona güveniyor.",
       "2. neden: ana yollardan yürümek güvenlik sorunu — kampüs çok büyük; gece tek başına 20 dakika yürümek çoğu öğrenciyi tedirgin ediyor, mekik güvenli dönüş demek.",
+    ],
+  },
+];
+
+/* ============================================================
+   PARAPHRASE — rewrite a C1 sentence with a required structural
+   transformation. AI-scored (scoreWithAI) / offline (analyzeWriting).
+   Mergeable from content.json (data.paraphrase).
+   Schema: { id, lv, source, instruction, sample }
+============================================================ */
+export const PARAPHRASE = [
+  {
+    id: "pp_although", lv: "C1",
+    source: "Although the experiment was carefully designed, it failed to produce conclusive results.",
+    instruction: "'Although' yerine 'In spite of' kullanarak cümleyi baştan kur (anlamı koru).",
+    sample: "In spite of being carefully designed, the experiment failed to produce conclusive results.",
+  },
+  {
+    id: "pp_passive", lv: "B2",
+    source: "The committee will announce the results next week.",
+    instruction: "Cümleyi edilgen (passive) yapıda yeniden kur.",
+    sample: "The results will be announced next week (by the committee).",
+  },
+  {
+    id: "pp_relative", lv: "B2",
+    source: "The scientist won a major prize. She discovered a new vaccine.",
+    instruction: "İki cümleyi tek bir cümlede, ilgi cümlesi (relative clause) kullanarak birleştir.",
+    sample: "The scientist who discovered a new vaccine won a major prize.",
+  },
+  {
+    id: "pp_nominal", lv: "C1",
+    source: "Because the prices increased rapidly, many customers complained.",
+    instruction: "Nedeni bir isim öbeğine (nominalisation) çevir; 'Because of …' ile başlat.",
+    sample: "Because of the rapid increase in prices, many customers complained.",
+  },
+  {
+    id: "pp_reported", lv: "C1",
+    source: "The manager said, \"We are launching the product tomorrow.\"",
+    instruction: "Cümleyi dolaylı anlatıma (reported speech) çevir.",
+    sample: "The manager said (that) they were launching the product the following day.",
+  },
+  {
+    id: "pp_inversion", lv: "C2",
+    source: "If the government had acted sooner, the crisis could have been avoided.",
+    instruction: "'If'i kaldırıp devrik koşul (inversion) ile yeniden kur.",
+    sample: "Had the government acted sooner, the crisis could have been avoided.",
+  },
+];
+
+/* ============================================================
+   ERRORHUNT — click-to-find hidden grammar errors in a paragraph.
+   Each item has exactly 3 errors; matched by word (find), with
+   position handled in the component. Mergeable (data.errorhunt).
+   Schema: { id, lv, text, errors:[{ find, fix, tr }] }
+============================================================ */
+export const ERRORHUNT = [
+  {
+    id: "eh_research", lv: "C1", field: "fen",
+    text: "Recent studies shows that the average global temperature have risen sharply. Scientists believe the warming will continue unless emissions is reduced.",
+    errors: [
+      { find: "shows", fix: "show", tr: "Özne 'studies' çoğul → 'show'." },
+      { find: "have risen", fix: "has risen", tr: "Özne 'the average global temperature' tekil → 'has risen'." },
+      { find: "is", fix: "are", tr: "Özne 'emissions' çoğul → 'are reduced'." },
+    ],
+  },
+  {
+    id: "eh_history", lv: "C1", field: "sosyal",
+    text: "The ancient city were founded more than two thousand years ago. Its inhabitants, who was famous for their trade, has built an impressive network of roads.",
+    errors: [
+      { find: "were", fix: "was", tr: "Özne 'The ancient city' tekil → 'was founded'." },
+      { find: "was", fix: "were", tr: "İlgi cümlesinin öznesi 'inhabitants' çoğul → 'who were famous'." },
+      { find: "has built", fix: "have built", tr: "Özne 'Its inhabitants' çoğul → 'have built'." },
+    ],
+  },
+  {
+    id: "eh_health", lv: "B2", field: "saglik",
+    text: "Daily exercise have many benefits for the body. A person who train regularly are less likely to develop heart disease.",
+    errors: [
+      { find: "have", fix: "has", tr: "Özne 'Daily exercise' tekil → 'has'." },
+      { find: "train", fix: "trains", tr: "İlgi cümlesinin öznesi 'A person' tekil → 'who trains'." },
+      { find: "are", fix: "is", tr: "Özne 'A person' tekil → 'is less likely'." },
+    ],
+  },
+  {
+    id: "eh_technology", lv: "B2", field: "sosyal",
+    text: "The internet have changed how we communicates with each other. People which use social media often share too much personal information.",
+    errors: [
+      { find: "have changed", fix: "has changed", tr: "Özne 'The internet' tekil → 'has changed'." },
+      { find: "communicates", fix: "communicate", tr: "'we' öznesiyle fiil yalın → 'communicate'." },
+      { find: "which", fix: "who", tr: "İnsanlar için ilgi zamiri 'who' olmalı, 'which' değil." },
+    ],
+  },
+  {
+    id: "eh_biology", lv: "C2", field: "fen",
+    text: "The human brain, despite its small size, consume a remarkable amount of energy. Neurons, that transmit signals across the body, relies on a constant supply of glucose.",
+    errors: [
+      { find: "consume", fix: "consumes", tr: "Özne 'The human brain' tekil → 'consumes'." },
+      { find: "that", fix: "which", tr: "Virgülle ayrılan (non-defining) ilgi cümlesi 'which' ister, 'that' değil." },
+      { find: "relies", fix: "rely", tr: "Özne 'Neurons' çoğul → 'rely'." },
+    ],
+  },
+  {
+    id: "eh_economy", lv: "C2", field: "sosyal",
+    text: "The new policy, which were introduced last year, have reduced unemployment significantly. Economists argues that the effects will last for many years.",
+    errors: [
+      { find: "were", fix: "was", tr: "İlgi cümlesinin öncülü 'policy' tekil → 'which was introduced'." },
+      { find: "have reduced", fix: "has reduced", tr: "Özne 'The new policy' tekil → 'has reduced'." },
+      { find: "argues", fix: "argue", tr: "Özne 'Economists' çoğul → 'argue'." },
     ],
   },
 ];
