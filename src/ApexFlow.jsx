@@ -10,7 +10,8 @@ import {
   TopHUD, Catalog, Placement, VocabReview, WordListRoom, GrammarHub,
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
   SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, OddoutRoom,
-  DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, MockRoom, FocusBar,
+  DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, MockRoom,
+  ParaphraseRoom, ErrorHuntRoom, FocusBar,
 } from "./modules.jsx";
 
 export default function ApexFlow() {
@@ -139,6 +140,8 @@ export default function ApexFlow() {
         {view === "paracomp" && <ParacompRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
         {view === "translate" && <TranslateRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
         {view === "toeflint" && <ToeflIntegratedRoom level={level} store={store} award={award} onBack={home} />}
+        {view === "paraphrase" && <ParaphraseRoom level={level} store={store} award={award} onBack={home} />}
+        {view === "errorhunt" && <ErrorHuntRoom level={level} store={store} award={award} onBack={home} />}
         {view === "writing" && <WritingStudio level={level} store={store} award={award} onBack={home} />}
         {view === "reading" && <ReadingMatrix onBack={home} award={award} />}
         {view === "lexical" && <LexicalArena onBack={home} award={award} />}

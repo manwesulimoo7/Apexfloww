@@ -13,7 +13,7 @@ import {
   LEXICAL, PASSAGES, SYNTAX, SPEAKING,
   LEVELS, LV_ORDER, lvIndex, levelMeta,
   PLACEMENT, placementLevel, VOCAB, vocabForLevel, GRAMMAR, LISTENING, WRITING, ARTICLES, CLOZE, RESTATE, ODDOUT,
-  DIALOGUE, PARACOMP, TRANSLATE, TOEFL_INTEGRATED,
+  DIALOGUE, PARACOMP, TRANSLATE, TOEFL_INTEGRATED, PARAPHRASE, ERRORHUNT,
   EXAMS, MODULE_INFO,
 } from "./catalog.js";
 
@@ -897,6 +897,7 @@ const MODULE_ICON = {
   restate: <Replace size={20} />, oddout: <Filter size={20} />,
   dialogue: <MessageSquare size={20} />, paracomp: <AlignLeft size={20} />, translate: <LanguagesIcon size={20} />,
   toeflint: <Layers size={20} />, mock: <ClipboardList size={20} />,
+  paraphrase: <RefreshCw size={20} />, errorhunt: <Scan size={20} />,
 };
 function ModuleCard({ k, ctx, go, done }) {
   const info = MODULE_INFO[k];
@@ -2129,12 +2130,12 @@ function useTimer(totalSec, running) {
   return left;
 }
 const mmss = (s) => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
-function extractScore(txt) {
+function extractScore(txt, scale = 30) {
   if (!txt) return null;
-  let m = txt.match(/(\d{1,2})\s*\/\s*30/);
-  if (m) return Math.min(30, parseInt(m[1], 10));
+  let m = txt.match(new RegExp("(\\d{1,2})\\s*/\\s*" + scale));
+  if (m) return Math.min(scale, parseInt(m[1], 10));
   m = txt.match(/puan[^0-9]{0,12}(\d{1,2})/i);
-  if (m) return Math.min(30, parseInt(m[1], 10));
+  if (m) return Math.min(scale, parseInt(m[1], 10));
   return null;
 }
 
@@ -2578,6 +2579,240 @@ export function MockRoom({ level, store, onBack }) {
       </div>
       <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
     </div>
+  );
+}
+
+/* ============================================================
+   PARAPHRASE  (rewrite with a required structural transform)
+   AI-scored (scoreWithAI) / offline (analyzeWriting). 0–10.
+============================================================ */
+export function ParaphraseRoom({ level, store, award, onBack }) {
+  const [open, setOpen] = useState(null);
+  const items = useMemo(() => {
+    const f = PARAPHRASE.filter((p) => !level || lvIndex(p.lv) <= lvIndex(level));
+    return f.length ? f : PARAPHRASE;
+  }, [level]);
+  if (open) return <ParaphraseItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
+  return (
+    <>
+      <ModuleBar title="Yeniden Yazım" sub="C1 cümleyi yapısını değiştirerek kur" onBack={onBack} />
+      <div className="af-substage">
+        {PARAPHRASE.length === 0 ? (
+          <div className="af-empty"><AlertTriangle size={14} /> Henüz cümle yok — içerik kaynağından (content.json) eklenebilir.</div>
+        ) : null}
+        <div className="af-grid">
+          {items.map((p) => {
+            const done = !!store.state.done["paraphrase:" + p.id];
+            return (
+              <button key={p.id} className="af-card" onClick={() => setOpen(p)}>
+                <div className="af-card-top">
+                  <span className="af-card-icon af-ic-paraphrase"><RefreshCw size={20} /></span>
+                  <span className="af-card-tag">{p.lv}</span>
+                </div>
+                <div className="af-card-name">{p.instruction}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
+                <div className="af-card-desc">{p.source.slice(0, 56)}{p.source.length > 56 ? "…" : ""}</div>
+                <div className="af-card-go">YAZ <ArrowRight size={15} /></div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+function ParaphraseItem({ item, store, award, onBack }) {
+  const [text, setText] = useState("");
+  const [evaluating, setEvaluating] = useState(false);
+  const [err, setErr] = useState(null);
+  const [result, setResult] = useState(null);
+  const apiKey = store.state.settings.apiKey;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+  async function evaluate() {
+    if (evaluating) return;
+    const answer = text.trim();
+    if (answer.split(/\s+/).filter(Boolean).length < 3) { setErr("Değerlendirme için cümleni yaz."); return; }
+    setEvaluating(true); setErr(null);
+    const aiItem = {
+      type: "Paraphrase / Yeniden Yazım", exam: ["TOEFL"],
+      prompt:
+        "KAYNAK CÜMLE:\n" + item.source +
+        "\n\nİSTENEN DÖNÜŞÜM:\n" + item.instruction +
+        "\n\nÖğrencinin yeniden yazımını şu üç ölçüte göre değerlendir: (a) anlamı koruyor mu, (b) istenen yapısal dönüşümü doğru yaptı mı, (c) dilbilgisel olarak doğru mu. " +
+        "Yanıtının EN BAŞINA 'Puan: X/10' yaz, ardından 2–3 satır Türkçe geri bildirim ver ve son satırda 'Örnek: ' ile doğru bir yeniden yazım öner.",
+    };
+    try {
+      let raw, score, offline = false;
+      if (apiKey) {
+        raw = await scoreWithAI({ text: answer, item: aiItem, apiKey });
+        score = extractScore(raw, 10);
+      } else {
+        offline = true;
+        const a = analyzeWriting(answer, { minWords: 0 });
+        score = Math.max(0, Math.min(10, Math.round((parseFloat(a.band) / 8) * 10)));
+        raw = "Çevrimdışı yaklaşık değerlendirme (resmî değil):\n• " + a.notes.join("\n• ") +
+          "\n\nAI değerlendirmesi için Ayarlar'dan Anthropic API anahtarı ekle.";
+      }
+      setResult({ score, raw, offline });
+      store.markDone("paraphrase:" + item.id);
+      store.touchStreak();
+      award(score && score > 0 ? Math.round(score) : 5, true);
+    } catch (e) {
+      setErr(e.message || "Değerlendirme başarısız oldu.");
+    } finally { setEvaluating(false); }
+  }
+
+  return (
+    <>
+      <ModuleBar title="Yeniden Yazım" sub={"Paraphrase · " + item.lv} onBack={onBack} />
+      <div className="af-substage af-write">
+        <div className="af-write-prompt"><span className="af-write-cap">KAYNAK</span> {item.source}</div>
+        <div className="af-write-struct"><span className="af-write-cap">YÖNERGE</span> {item.instruction}</div>
+        {!result ? (
+          <>
+            <textarea className="af-write-area" value={text} onChange={(e) => setText(e.target.value)}
+              placeholder="Cümleyi, istenen yapıyı kullanarak yeniden yaz…" />
+            <div className="af-write-meta"><span>{words} kelime</span></div>
+            <div className="af-score-row">
+              <button className="af-score-btn is-ai" disabled={evaluating || words < 3} onClick={evaluate}>
+                <Sparkles size={15} /> {evaluating ? "değerlendiriliyor…" : "Değerlendir"}
+              </button>
+              <span className="af-ti-aimode">{apiKey ? "AI puanı (Anthropic)" : "çevrimdışı yaklaşık puan"}</span>
+            </div>
+            {err ? <div className="af-ai-err"><AlertTriangle size={14} /> {err}</div> : null}
+          </>
+        ) : (
+          <div className="af-result">
+            <div className="af-result-cap">YENİDEN YAZIM</div>
+            <div className="af-result-lv">{result.score != null ? result.score + "/10" : "—"}</div>
+            <div className="af-band-cap">{result.offline ? "çevrimdışı yaklaşık · resmî değil" : "AI değerlendirmesi · yaklaşıktır"}</div>
+            <div className="af-ai-out af-ti-feedback">{result.raw}</div>
+            <div className="af-pp-sample"><span className="af-write-cap">ÖRNEK</span> {item.sample}</div>
+            <button className="af-q-next af-result-go" onClick={onBack}>Diğer cümleler <ArrowRight size={16} /></button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   ERROR HUNT  (click-to-find hidden grammar errors)
+============================================================ */
+function buildEH(item) {
+  const words = item.text.split(/\s+/);
+  const norm = (s) => (s || "").toLowerCase().replace(/^[^a-z0-9']+|[^a-z0-9']+$/gi, "");
+  const errorOf = {};                         // wordIndex -> errorIndex
+  const used = new Array(words.length).fill(false);
+  (item.errors || []).forEach((err, ei) => {
+    const fw = err.find.split(/\s+/).map(norm);
+    for (let i = 0; i + fw.length <= words.length; i++) {
+      if (used[i]) continue;
+      let ok = true;
+      for (let k = 0; k < fw.length; k++) {
+        if (used[i + k] || norm(words[i + k]) !== fw[k]) { ok = false; break; }
+      }
+      if (ok) { for (let k = 0; k < fw.length; k++) { errorOf[i + k] = ei; used[i + k] = true; } break; }
+    }
+  });
+  return { words, errorOf };
+}
+export function ErrorHuntRoom({ level, store, award, onBack }) {
+  const [open, setOpen] = useState(null);
+  const items = useMemo(() => {
+    const f = ERRORHUNT.filter((e) => !level || lvIndex(e.lv) <= lvIndex(level));
+    return f.length ? f : ERRORHUNT;
+  }, [level]);
+  if (open) return <ErrorHuntItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
+  return (
+    <>
+      <ModuleBar title="Hata Avcısı" sub="paragraftaki gizli gramer hatalarını bul" onBack={onBack} />
+      <div className="af-substage">
+        {ERRORHUNT.length === 0 ? (
+          <div className="af-empty"><AlertTriangle size={14} /> Henüz paragraf yok — içerik kaynağından (content.json) eklenebilir.</div>
+        ) : null}
+        <div className="af-grid">
+          {items.map((e) => {
+            const done = !!store.state.done["errorhunt:" + e.id];
+            return (
+              <button key={e.id} className="af-card" onClick={() => setOpen(e)}>
+                <div className="af-card-top">
+                  <span className="af-card-icon af-ic-errorhunt"><Scan size={20} /></span>
+                  <span className="af-card-tag">{e.lv}</span>
+                </div>
+                <div className="af-card-name">{e.text.slice(0, 48)}…{done ? <Check size={14} className="af-done-badge" /> : null}</div>
+                <div className="af-card-desc">{e.errors.length} gizli hata</div>
+                <div className="af-card-go">BUL <ArrowRight size={15} /></div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+function ErrorHuntItem({ item, store, award, onBack }) {
+  const { words, errorOf } = useMemo(() => buildEH(item), [item]);
+  const [selected, setSelected] = useState([]);   // word indices clicked
+  const [checked, setChecked] = useState(false);
+  const left = useTimer(90, !checked);
+
+  const found = new Set();
+  selected.forEach((idx) => { if (errorOf[idx] != null) found.add(errorOf[idx]); });
+  const score = found.size;
+
+  useEffect(() => { if (!checked && left === 0) setChecked(true); }, [checked, left]);
+  useEffect(() => {
+    if (!checked) return;
+    store.markDone("errorhunt:" + item.id);
+    store.touchStreak();
+    award(score > 0 ? score * 6 : 4, score > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checked]);
+
+  function toggle(idx) {
+    if (checked) return;
+    setSelected((s) => s.includes(idx) ? s.filter((x) => x !== idx) : [...s, idx]);
+  }
+  function check() { if (!checked) setChecked(true); }
+
+  return (
+    <>
+      <ModuleBar title="Hata Avcısı" sub={"Hata Avcısı · " + item.lv} onBack={onBack}
+        right={!checked ? <span className="af-modbar-count">{mmss(left)}</span> : null} />
+      <div className="af-substage">
+        <div className="af-eh-note"><Scan size={13} /> Paragrafta <b>{item.errors.length}</b> gizli gramer hatası var. Hatalı olduğunu düşündüğün kelimelere tıkla, sonra “Kontrol et”e bas.</div>
+        <p className="af-eh-text">
+          {words.map((w, idx) => {
+            let cls = "af-eh-w";
+            const isErr = errorOf[idx] != null;
+            if (checked) {
+              if (isErr && selected.includes(idx)) cls += " is-found";
+              else if (isErr) cls += " is-missed";
+              else if (selected.includes(idx)) cls += " is-wrong";
+            } else if (selected.includes(idx)) cls += " is-sel";
+            return <span key={idx} className={cls} onClick={() => toggle(idx)}>{w}</span>;
+          })}
+        </p>
+
+        {!checked ? (
+          <button className="af-q-next" onClick={check}>Kontrol et <Check size={15} /></button>
+        ) : (
+          <div className="af-eh-result">
+            <div className="af-result-cap">{score}/{item.errors.length} HATA BULUNDU</div>
+            <div className="af-eh-explain">
+              {item.errors.map((e, ei) => (
+                <div key={ei} className={"af-eh-exrow " + (found.has(ei) ? "is-ok" : "is-no")}>
+                  {found.has(ei) ? <Check size={14} className="af-eh-exic is-ok" /> : <X size={14} className="af-eh-exic is-no" />}
+                  <span><b>{e.find}</b> → <b className="af-eh-fix">{e.fix}</b> · {e.tr}</span>
+                </div>
+              ))}
+            </div>
+            <button className="af-q-next af-result-go" onClick={onBack}>Diğer paragraflar <ArrowRight size={16} /></button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
