@@ -773,6 +773,7 @@ export function Placement({ onDone }) {
   const [checked, setChecked] = useState(false);
   const [correct, setCorrect] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [picking, setPicking] = useState(false);
   const pItems = useMemo(() => [...PLACEMENT].sort((a, b) => lvIndex(a.lv) - lvIndex(b.lv)), []);
   const it = pItems[i];
   function pick(idx) { if (!checked) setSel(idx); }       // changeable until you confirm
@@ -785,6 +786,37 @@ export function Placement({ onDone }) {
     setSel(null); setChecked(false);
     if (i + 1 < pItems.length) setI(i + 1);
     else setFinished(true);
+  }
+  // skip without answering: not counted as correct (so it lowers the placement ratio)
+  function skip() {
+    setSel(null); setChecked(false);
+    if (i + 1 < pItems.length) setI(i + 1);
+    else setFinished(true);
+  }
+
+  // "Seviyemi biliyorum" — skip the whole test and choose a level directly
+  if (picking) {
+    return (
+      <div className="af-substage af-place">
+        <div className="af-place-head">
+          <div className="af-boot"><span className="af-prompt-sym">›</span> seviye seç<span className="af-caret" /></div>
+          <h1 className="af-h1">Seviyeni seç.</h1>
+          <p className="af-lede">Seviyeni biliyorsan doğrudan seç — istediğin zaman seviye testini yeniden çözebilirsin.</p>
+        </div>
+        <div className="af-levelpick">
+          {LV_ORDER.map((lv) => {
+            const meta = levelMeta(lv);
+            return (
+              <button key={lv} className="af-levelpick-btn" onClick={() => onDone(lv)}>
+                <span className="af-levelpick-id">{lv}</span>
+                <span className="af-levelpick-label">{meta.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <button className="af-place-back" onClick={() => setPicking(false)}><ChevronLeft size={14} /> teste dön</button>
+      </div>
+    );
   }
   if (finished) {
     const lv = placementLevel(correct, pItems.length);
@@ -812,7 +844,8 @@ export function Placement({ onDone }) {
       <div className="af-place-head">
         <div className="af-boot"><span className="af-prompt-sym">›</span> seviye tespiti<span className="af-caret" /></div>
         <h1 className="af-h1">Seni doğru yerden başlatalım.</h1>
-        <p className="af-lede">Kısa sorular, kolaydan zora ve değişen tiplerde. Bir şık seç, istersen değiştir, sonra “Kontrol et”e bas — doğru ve yanlış cevabı gösteririm. Seviyeni testin sonunda söylerim.</p>
+        <p className="af-lede">Kısa sorular, kolaydan zora ve değişen tiplerde. Bir şık seç, istersen değiştir, sonra “Kontrol et”e bas — doğru ve yanlış cevabı gösteririm. Emin olmadığın soruyu “Boş bırak” ile geçebilirsin. Seviyeni testin sonunda söylerim.</p>
+        <button className="af-place-skiptest" onClick={() => setPicking(true)}>Seviyemi biliyorum — testi atla <ArrowRight size={14} /></button>
       </div>
       <div className="af-prog-track af-place-prog">
         <div className="af-prog-fill" style={{ width: ((i) / pItems.length) * 100 + "%" }} />
@@ -839,7 +872,10 @@ export function Placement({ onDone }) {
           })}
         </div>
         {!checked ? (
-          <button className="af-q-next" disabled={sel === null} onClick={check}>Kontrol et <Check size={15} /></button>
+          <div className="af-place-actions">
+            <button className="af-q-next" disabled={sel === null} onClick={check}>Kontrol et <Check size={15} /></button>
+            <button className="af-place-skip" onClick={skip}>Boş bırak</button>
+          </div>
         ) : (
           <button className="af-q-next" onClick={next}>
             {i + 1 < pItems.length ? <>Devam <ArrowRight size={15} /></> : <>Sonucu gör <Check size={15} /></>}
@@ -854,7 +890,7 @@ export function Placement({ onDone }) {
    CATALOG  (v2 home — Learn track + Exam track)
 ============================================================ */
 const MODULE_ICON = {
-  vocab: <Repeat size={20} />, grammar: <GraduationCap size={20} />,
+  vocab: <Repeat size={20} />, wordlist: <ListChecks size={20} />, grammar: <GraduationCap size={20} />,
   listening: <Headphones size={20} />, articles: <BookMarked size={20} />, reading: <BookOpen size={20} />,
   lexical: <Crosshair size={20} />, syntax: <Hammer size={20} />,
   speaking: <Mic size={20} />, writing: <PenLine size={20} />, cloze: <FileText size={20} />,
@@ -1310,6 +1346,82 @@ export function VocabReview({ store, onBack }) {
             </div>
           ) : null}
         </div>
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   WORD LIST  (dictionary-style browse of the full VOCAB pool;
+   reads VOCAB live so content.json additions appear too)
+============================================================ */
+export function WordListRoom({ store, onBack }) {
+  const [lv, setLv] = useState(store.state.level || "A1");
+  const [query, setQuery] = useState("");
+  const [limit, setLimit] = useState(60);
+
+  const counts = useMemo(() => {
+    const c = {};
+    for (const id of LV_ORDER) c[id] = 0;
+    for (const v of VOCAB) if (c[v.lv] != null) c[v.lv] += 1;
+    return c;
+  }, []);
+
+  const all = useMemo(
+    () => VOCAB.filter((v) => v.lv === lv).sort((a, b) => (a.w || "").localeCompare(b.w || "")),
+    [lv]
+  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((v) =>
+      (v.w || "").toLowerCase().includes(q) || (v.tr || "").toLowerCase().includes(q));
+  }, [all, query]);
+
+  function selectLv(id) { setLv(id); setLimit(60); setQuery(""); }
+
+  return (
+    <>
+      <ModuleBar title="Kelime Listesi" sub="seviye seviye tüm kelimeler" onBack={onBack} />
+      <div className="af-substage">
+        <div className="af-wl-levels">
+          {LV_ORDER.map((id) => (
+            <button key={id} className={"af-wl-lvbtn " + (id === lv ? "is-on" : "")} onClick={() => selectLv(id)}>
+              <span className="af-wl-lvbtn-id">{id}</span>
+              <span className="af-wl-lvbtn-n">{counts[id] || 0}</span>
+            </button>
+          ))}
+        </div>
+        <input className="af-wl-search" type="text" value={query} spellCheck={false}
+          onChange={(e) => { setQuery(e.target.value); setLimit(60); }}
+          placeholder={"Ara — " + lv + " seviyesinde kelime ya da anlam…"} />
+
+        {filtered.length === 0 ? (
+          <div className="af-empty"><AlertTriangle size={14} /> {all.length === 0
+            ? lv + " seviyesinde henüz kelime yok — içerik kaynağından (content.json) eklenebilir."
+            : "Aramana uyan kelime bulunamadı."}</div>
+        ) : (
+          <>
+            <div className="af-wl-count">{filtered.length} kelime{query ? " (filtreli)" : ""}</div>
+            <div className="af-wl-list">
+              {filtered.slice(0, limit).map((v) => (
+                <div key={v.id} className="af-wl-row">
+                  <div className="af-wl-top">
+                    <span className="af-wl-w">{v.w}</span>
+                    {v.pos ? <span className="af-wl-pos">{v.pos}</span> : null}
+                    <span className="af-wl-tr">{v.tr}</span>
+                  </div>
+                  {v.ex ? <div className="af-wl-ex">“{v.ex}”</div> : null}
+                </div>
+              ))}
+            </div>
+            {filtered.length > limit ? (
+              <button className="af-wl-more" onClick={() => setLimit((n) => n + 60)}>
+                daha fazla göster ({filtered.length - limit})
+              </button>
+            ) : null}
+          </>
+        )}
       </div>
     </>
   );

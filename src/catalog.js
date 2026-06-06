@@ -726,6 +726,7 @@ export const EXAMS = [
 /* module registry: maps a module key -> label + which skill/level band it serves */
 export const MODULE_INFO = {
   vocab:    { name: "Kelime Hazinesi", sub: "aralıklı tekrar (SRS)", minLv: "A1" },
+  wordlist: { name: "Kelime Listesi", sub: "seviye seviye tüm kelimeler", minLv: "A1" },
   grammar:  { name: "Gramer Atölyesi", sub: "seviye seviye dilbilgisi", minLv: "A1" },
   listening:{ name: "Dinleme Odası", sub: "sesli metin + sorular", minLv: "A2" },
   articles: { name: "Okuma Parçaları", sub: "makale + sorular (kolay format)", minLv: "A2" },
