@@ -6,7 +6,7 @@ Gamified İngilizce sınav hazırlık (IELTS/TOEFL/YDS/YÖKDİL) ve başlangıç
 ## Mimari
 - Vite + React 18 + lucide-react. **Tailwind YOK.**
 - `vite-plugin-singlefile` ile TEK bir `dist/index.html` üretir (her şey gömülü,
-  offline çalışır, file:// ve Netlify'da çalışır). Teslim edilen çıktı budur.
+  offline çalışır, file:// üzerinde ve statik hosting'te çalışır). Teslim edilen çıktı budur.
 - **Veri koddan ayrıdır:**
   - `src/catalog.js` — tüm içerik (kelimeler, sorular, seviyeler, modül tanımları).
   - Uygulama açılışta uzak bir `content.json` çeker ve içeriği **BİRLEŞTİRİR**
@@ -30,5 +30,12 @@ Gamified İngilizce sınav hazırlık (IELTS/TOEFL/YDS/YÖKDİL) ve başlangıç
 npm install
 npm run build      # -> dist/index.html
 ```
-Netlify bu repoya bağlı: build komutu `npm run build`, yayın klasörü `dist`.
-`main`'e her push = otomatik yayın.
+Hosting **Cloudflare Workers** (static assets). Repo kökündeki `wrangler.jsonc`
+config'i `./dist` klasörünü tek sayfalık uygulama (SPA) olarak sunar.
+
+`main`'e her push → **Workers Builds** otomatik olarak derler (`npm run build`)
+ve yayınlar (`npx wrangler deploy`). Build çıktısı `vite-plugin-singlefile` ile
+tek dosya: `dist/index.html`.
+
+Canlı adres `apexfloww.*.workers.dev` formatındadır (kesin adres Cloudflare
+panelinde görünür). Netlify deployment'ı Haziran 2026'da emekli edildi.
