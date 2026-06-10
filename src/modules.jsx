@@ -9,6 +9,7 @@ import {
   MessageSquare, AlignLeft, Languages as LanguagesIcon, ClipboardList, BarChart3,
 } from "lucide-react";
 import { tierFor, speak, stopSpeak, speechSupported, reviewQueue, analyzeWriting, scoreWithAI } from "./lib.js";
+import { useLang, t, pick, exTr, tagLabel, qtypeLabel, badgeCatLabel, fieldLabel, rankFor } from "./i18n.js";
 import {
   LEXICAL, PASSAGES, SYNTAX, SPEAKING,
   LEVELS, LV_ORDER, lvIndex, levelMeta,
@@ -54,6 +55,7 @@ function byField(arr, exam, field) {
    TOP HUD
 ============================================================ */
 export function TopHUD({ xp, combo, maxCombo, flow, lastGain, onReset }) {
+  const lang = useLang();
   const { cur, next, pct } = tierFor(xp);
   return (
     <div className="af-hud">
@@ -101,7 +103,7 @@ export function TopHUD({ xp, combo, maxCombo, flow, lastGain, onReset }) {
           <span>{cur.band}</span>
           <span className="af-prog-mid">
             {next ? `${Math.max(0, next.xp - xp)} XP → Band ${next.band}` : "MAX RANK · Band 9.0"}
-            {maxCombo > 0 ? `   ·   en yüksek seri: ${maxCombo}` : ""}
+            {maxCombo > 0 ? `   ·   ${t(lang, "hud.bestCombo", { n: maxCombo })}` : ""}
           </span>
           <span>{next ? next.band : "9.0"}</span>
         </div>
@@ -201,26 +203,27 @@ function ModuleBar({ title, sub, onBack, right }) {
    MODULE A :: LEXICAL ARENA
 ============================================================ */
 export function LexicalArena({ onBack, award }) {
+  const lang = useLang();
   const deck = useMemo(() => shuffle(LEXICAL), []);
   const [i, setI] = useState(0);
   const item = deck[i % deck.length];
   const options = useMemo(() => shuffle([item.a, ...item.d]), [i]);
   const [picked, setPicked] = useState(null);
-  const [t, setT] = useState(12);
+  const [tl, setTl] = useState(12);
   const [bonus, setBonus] = useState(0);
 
   useEffect(() => {
     if (picked) return;
-    if (t <= 0) { setPicked("__timeout__"); award(0, false); return; }
-    const id = setTimeout(() => setT((x) => x - 1), 1000);
+    if (tl <= 0) { setPicked("__timeout__"); award(0, false); return; }
+    const id = setTimeout(() => setTl((x) => x - 1), 1000);
     return () => clearTimeout(id);
-  }, [t, picked]);
+  }, [tl, picked]);
 
   function choose(opt) {
     if (picked) return;
     setPicked(opt);
     if (opt === item.a) {
-      const b = t >= 9 ? 5 : t >= 5 ? 3 : 1;
+      const b = tl >= 9 ? 5 : tl >= 5 ? 3 : 1;
       setBonus(b);
       award(10 + b, true);
     } else {
@@ -229,23 +232,23 @@ export function LexicalArena({ onBack, award }) {
     }
   }
   function next() {
-    setPicked(null); setBonus(0); setT(12); setI((x) => x + 1);
+    setPicked(null); setBonus(0); setTl(12); setI((x) => x + 1);
   }
 
   const answered = !!picked;
   const right = picked === item.a;
   return (
     <div className="af-mod">
-      <ModuleBar title="LEXICAL ARENA" sub="rapid-fire · eşanlam" onBack={onBack}
+      <ModuleBar title="LEXICAL ARENA" sub={t(lang, "lex.sub")} onBack={onBack}
         right={
-          <div className={"af-clock " + (t <= 4 && !answered ? "af-clock-warn" : "")}>
-            <Timer size={14} /> {answered ? "—" : t + "s"}
+          <div className={"af-clock " + (tl <= 4 && !answered ? "af-clock-warn" : "")}>
+            <Timer size={14} /> {answered ? "—" : tl + "s"}
           </div>
         } />
 
       <div className="af-arena">
         <div className="af-arena-q">
-          <div className="af-arena-prompt">EŞANLAMINI SEÇ</div>
+          <div className="af-arena-prompt">{t(lang, "lex.prompt")}</div>
           <div className="af-arena-word">{item.w}</div>
         </div>
 
@@ -272,11 +275,11 @@ export function LexicalArena({ onBack, award }) {
         {answered && (
           <div className={"af-verdict " + (right ? "af-v-ok" : "af-v-no")}>
             <div className="af-verdict-head">
-              {right ? <><Check size={15} /> DOĞRU {bonus ? `· +${bonus} hız bonusu` : ""}</>
-                     : <><X size={15} /> {picked === "__timeout__" ? "SÜRE DOLDU" : "YANLIŞ"} · seri sıfırlandı</>}
+              {right ? <><Check size={15} /> {t(lang, "lex.correct")} {bonus ? t(lang, "lex.speedBonus", { n: bonus }) : ""}</>
+                     : <><X size={15} /> {picked === "__timeout__" ? t(lang, "lex.timeout") : t(lang, "lex.wrong")} {t(lang, "lex.comboReset")}</>}
             </div>
             <div className="af-verdict-body">{item.tr}</div>
-            <button className="af-next" onClick={next}>SONRAKİ <ArrowRight size={15} /></button>
+            <button className="af-next" onClick={next}>{t(lang, "common.NEXT")} <ArrowRight size={15} /></button>
           </div>
         )}
       </div>
@@ -288,6 +291,7 @@ export function LexicalArena({ onBack, award }) {
    MODULE B :: DEDUCTIVE READING MATRIX
 ============================================================ */
 export function ReadingMatrix({ onBack, award }) {
+  const lang = useLang();
   const [pIdx, setPIdx] = useState(0);
   const [xray, setXray] = useState(false);
   const P = PASSAGES[pIdx];
@@ -338,8 +342,8 @@ export function ReadingMatrix({ onBack, award }) {
         ))}
         {xray && (
           <div className="af-xray-legend">
-            <span className="af-leg em">metindeki anahtar</span>
-            <span className="af-leg sky">sorudaki paraphrase</span>
+            <span className="af-leg em">{t(lang, "rm.legendKey")}</span>
+            <span className="af-leg sky">{t(lang, "rm.legendPara")}</span>
           </div>
         )}
       </div>
@@ -409,11 +413,11 @@ export function ReadingMatrix({ onBack, award }) {
               const st = heads[key];
               return (
                 <div key={it.para} className="af-headrow">
-                  <span className="af-headpara">Paragraf {it.para}</span>
+                  <span className="af-headpara">{t(lang, "rm.paragraph", { p: it.para })}</span>
                   <select className={"af-select " + (st ? (st.correct ? "af-select-ok" : "af-select-no") : "")}
                     value={st ? st.val : ""} disabled={st && st.locked}
                     onChange={(e) => answerHead(it.para, e.target.value)}>
-                    <option value="" disabled>başlık seç…</option>
+                    <option value="" disabled>{t(lang, "rm.pickHeading")}</option>
                     {P.headingOptions.map((h) => (
                       <option key={h.k} value={h.k}>{h.k} — {h.t}</option>
                     ))}
@@ -421,7 +425,7 @@ export function ReadingMatrix({ onBack, award }) {
                   {st && (
                     <div className={"af-mini " + (st.correct ? "af-mini-ok" : "af-mini-no")}>
                       {st.correct ? <Check size={13} /> : <X size={13} />}{" "}
-                      {st.correct ? it.tr : "Tekrar dene — doğru başlığı bulana dek kilitlenmez."}
+                      {st.correct ? it.tr : t(lang, "rm.tryAgain")}
                     </div>
                   )}
                 </div>
@@ -431,7 +435,7 @@ export function ReadingMatrix({ onBack, award }) {
 
           {/* SENTENCE INSERTION */}
           <div className="af-qblock">
-            <div className="af-qhead"><ArrowRight size={14} /> Sentence Insertion · Paragraf {P.insertion.anchorPara}</div>
+            <div className="af-qhead"><ArrowRight size={14} /> Sentence Insertion · {t(lang, "rm.paragraph", { p: P.insertion.anchorPara })}</div>
             <div className="af-insert-sent">“{P.insertion.sentence}”</div>
             <div className="af-insert-slots">
               {P.insertion.slots.map((s, idx) => {
@@ -472,6 +476,7 @@ export function SyntaxForge({ onBack, award }) {
     onNext={() => setIdx((x) => x + 1)} index={idx} total={SYNTAX.length} />;
 }
 function ForgeItem({ item, award, onBack, onNext, index, total }) {
+  const lang = useLang();
   const order = useMemo(() => {
     // shuffle indices, ensure not already sorted
     let s = shuffle(item.frags.map((_, i) => i));
@@ -519,14 +524,11 @@ function ForgeItem({ item, award, onBack, onNext, index, total }) {
         right={<span className="af-forge-count">{index % total + 1}/{total}</span>} />
 
       <div className="af-forge">
-        <div className="af-forge-instr">
-          Parçaları doğru sırada birleştirip mantıksal, gramatik bir <b>Band {item.band}</b> cümlesi kur.
-          Yerleştirmek için parçaya tıkla; çıkarmak için yukarıdaki parçaya tıkla.
-        </div>
+        <div className="af-forge-instr">{t(lang, "sf.instr", { band: item.band })}</div>
 
         {/* build line */}
         <div className={"af-build " + (solved ? "af-build-solved" : "")}>
-          {placed.length === 0 && <span className="af-build-empty">cümleni buraya inşa et…</span>}
+          {placed.length === 0 && <span className="af-build-empty">{t(lang, "sf.buildHere")}</span>}
           {placed.map((orig, i) => {
             let cls = "af-chip af-chip-placed";
             if (solved || revealed) cls += " af-chip-ok";
@@ -553,24 +555,24 @@ function ForgeItem({ item, award, onBack, onNext, index, total }) {
         {(solved || revealed) ? (
           <div className="af-verdict af-v-ok">
             <div className="af-verdict-head">
-              {revealed ? <><Lightbulb size={15} /> CEVAP GÖSTERİLDİ (XP yok)</> : <><Check size={15} /> KUSURSUZ · +25 XP</>}
+              {revealed ? <><Lightbulb size={15} /> {t(lang, "sf.revealed")}</> : <><Check size={15} /> {t(lang, "sf.perfect")}</>}
             </div>
             <div className="af-verdict-body">{item.tr}</div>
             <div className="af-forge-actions">
-              <button className="af-next ghost" onClick={reset}><RotateCcw size={14} /> tekrar</button>
-              <button className="af-next" onClick={() => { onNext(); }}>SONRAKİ <ArrowRight size={15} /></button>
+              <button className="af-next ghost" onClick={reset}><RotateCcw size={14} /> {t(lang, "sf.retry")}</button>
+              <button className="af-next" onClick={() => { onNext(); }}>{t(lang, "common.NEXT")} <ArrowRight size={15} /></button>
             </div>
           </div>
         ) : full ? (
           <div className="af-verdict af-v-no">
-            <div className="af-verdict-head"><AlertTriangle size={15} /> SIRA HATALI · yeşil parçalar yerinde</div>
+            <div className="af-verdict-head"><AlertTriangle size={15} /> {t(lang, "sf.wrongOrder")}</div>
             <div className="af-verdict-body">
               {item.tr}
-              <div className="af-forge-hint">Kırmızı parçalara (yukarıda) tıklayıp havuza geri al, yeniden dene.</div>
+              <div className="af-forge-hint">{t(lang, "sf.hint")}</div>
             </div>
             <div className="af-forge-actions">
-              <button className="af-next ghost" onClick={reset}><RotateCcw size={14} /> sıfırla</button>
-              <button className="af-next ghost" onClick={reveal}><Lightbulb size={14} /> cevabı göster</button>
+              <button className="af-next ghost" onClick={reset}><RotateCcw size={14} /> {t(lang, "sf.reset")}</button>
+              <button className="af-next ghost" onClick={reveal}><Lightbulb size={14} /> {t(lang, "sf.showAnswer")}</button>
             </div>
           </div>
         ) : null}
@@ -583,28 +585,29 @@ function ForgeItem({ item, award, onBack, onNext, index, total }) {
    MODULE D :: 120-SECOND PRESSURE COOKER
 ============================================================ */
 export function PressureCooker({ onBack, award }) {
+  const lang = useLang();
   const [idx, setIdx] = useState(0);
   const item = SPEAKING[idx % SPEAKING.length];
   const [phase, setPhase] = useState("idle"); // idle | prep | talk | review
-  const [t, setT] = useState(0);
+  const [tp, setTp] = useState(0);
   const [used, setUsed] = useState([false, false, false]);
   const [scored, setScored] = useState(false);
   const PREP = 15, TALK = 120;
 
   useEffect(() => {
     if (phase !== "prep" && phase !== "talk") return;
-    if (t <= 0) {
-      if (phase === "prep") { setPhase("talk"); setT(TALK); }
+    if (tp <= 0) {
+      if (phase === "prep") { setPhase("talk"); setTp(TALK); }
       else { setPhase("review"); }
       return;
     }
-    const id = setTimeout(() => setT((x) => x - 1), 1000);
+    const id = setTimeout(() => setTp((x) => x - 1), 1000);
     return () => clearTimeout(id);
-  }, [t, phase]);
+  }, [tp, phase]);
 
-  function start() { setPhase("prep"); setT(PREP); setUsed([false, false, false]); setScored(false); }
+  function start() { setPhase("prep"); setTp(PREP); setUsed([false, false, false]); setScored(false); }
   function skip() {
-    if (phase === "prep") { setPhase("talk"); setT(TALK); }
+    if (phase === "prep") { setPhase("talk"); setTp(TALK); }
     else if (phase === "talk") { setPhase("review"); }
   }
   function confirmReview() {
@@ -614,13 +617,13 @@ export function PressureCooker({ onBack, award }) {
     setScored(true);
   }
   function nextPrompt() {
-    setIdx((x) => x + 1); setPhase("idle"); setT(0); setUsed([false, false, false]); setScored(false);
+    setIdx((x) => x + 1); setPhase("idle"); setTp(0); setUsed([false, false, false]); setScored(false);
   }
 
   const totalForPhase = phase === "prep" ? PREP : TALK;
   const ring = phase === "prep" || phase === "talk"
-    ? Math.max(0, Math.min(100, (t / totalForPhase) * 100)) : 0;
-  const danger = phase === "talk" && t <= 15;
+    ? Math.max(0, Math.min(100, (tp / totalForPhase) * 100)) : 0;
+  const danger = phase === "talk" && tp <= 15;
 
   return (
     <div className="af-mod">
@@ -642,8 +645,8 @@ export function PressureCooker({ onBack, award }) {
               {phase === "review" && <Check size={26} />}
               {(phase === "prep" || phase === "talk") && (
                 <>
-                  <div className="af-ring-num">{t}</div>
-                  <div className="af-ring-lbl">{phase === "prep" ? "HAZIRLIK" : "KONUŞ"}</div>
+                  <div className="af-ring-num">{tp}</div>
+                  <div className="af-ring-lbl">{phase === "prep" ? t(lang, "pc.prep") : t(lang, "pc.talk")}</div>
                 </>
               )}
             </div>
@@ -653,7 +656,7 @@ export function PressureCooker({ onBack, award }) {
         {/* survival kit */}
         {(phase === "prep" || phase === "talk") && (
           <div className="af-kit">
-            <div className="af-kit-head"><Sparkles size={14} /> SURVIVAL KIT — konuşmana bunları yedir</div>
+            <div className="af-kit-head"><Sparkles size={14} /> {t(lang, "pc.kit")}</div>
             <div className="af-kit-items">
               {item.kit.map((k, i) => <span key={i} className="af-kit-chip">{k}</span>)}
             </div>
@@ -663,18 +666,18 @@ export function PressureCooker({ onBack, award }) {
         {/* controls / review */}
         {phase === "idle" && (
           <div className="af-speak-controls">
-            <button className="af-start-big" onClick={start}><Play size={18} /> BAŞLAT · 15s hazırlık → 120s konuşma</button>
+            <button className="af-start-big" onClick={start}><Play size={18} /> {t(lang, "pc.start")}</button>
             <div className="af-speak-tip"><Lightbulb size={13} /> {item.tr}</div>
           </div>
         )}
         {(phase === "prep" || phase === "talk") && (
           <div className="af-speak-controls">
-            <button className="af-next ghost" onClick={skip}>{phase === "prep" ? "hazırlığı atla →" : "konuşmayı bitir →"}</button>
+            <button className="af-next ghost" onClick={skip}>{phase === "prep" ? t(lang, "pc.skipPrep") : t(lang, "pc.endTalk")}</button>
           </div>
         )}
         {phase === "review" && (
           <div className="af-review">
-            <div className="af-review-head">Öz-değerlendirme — hangilerini gerçekten kullandın?</div>
+            <div className="af-review-head">{t(lang, "pc.selfReview")}</div>
             <div className="af-review-items">
               {item.kit.map((k, i) => (
                 <button key={i} className={"af-rev-chip " + (used[i] ? "on" : "")}
@@ -685,14 +688,14 @@ export function PressureCooker({ onBack, award }) {
               ))}
             </div>
             {!scored ? (
-              <button className="af-start-big" onClick={confirmReview}><Award size={16} /> PUANLA</button>
+              <button className="af-start-big" onClick={confirmReview}><Award size={16} /> {t(lang, "pc.score")}</button>
             ) : (
               <div className="af-verdict af-v-ok" style={{ marginTop: 14 }}>
                 <div className="af-verdict-head">
-                  <Check size={15} /> +{used.filter(Boolean).length * 10 + 20} XP · {used.filter(Boolean).length}/3 kalıp
+                  <Check size={15} /> +{used.filter(Boolean).length * 10 + 20} XP · {used.filter(Boolean).length}/3 {t(lang, "pc.phrases")}
                 </div>
                 <div className="af-verdict-body">{item.tr}</div>
-                <button className="af-next" onClick={nextPrompt}>SONRAKİ PROMPT <ArrowRight size={15} /></button>
+                <button className="af-next" onClick={nextPrompt}>{t(lang, "pc.nextPrompt")} <ArrowRight size={15} /></button>
               </div>
             )}
           </div>
@@ -710,6 +713,7 @@ export function PressureCooker({ onBack, award }) {
    shared : MCQ runner (used by grammar + listening)
 ============================================================ */
 function MCQRunner({ items, award, points = 15, onFinish, footer }) {
+  const lang = useLang();
   const [i, setI] = useState(0);
   const [sel, setSel] = useState(null);       // current pick — changeable until checked
   const [checked, setChecked] = useState(false);
@@ -729,7 +733,7 @@ function MCQRunner({ items, award, points = 15, onFinish, footer }) {
   }
   return (
     <div className="af-mcq">
-      <div className="af-q-prog">soru {i + 1} / {items.length}</div>
+      <div className="af-q-prog">{t(lang, "common.question", { i: i + 1, n: items.length })}</div>
       <div className="af-q-text">{it.q}</div>
       <div className="af-mcq-opts">
         {it.opts.map((o, idx) => {
@@ -749,14 +753,14 @@ function MCQRunner({ items, award, points = 15, onFinish, footer }) {
           );
         })}
       </div>
-      {checked && it.tr ? <div className="af-q-exp"><Lightbulb size={13} /> {it.tr}</div> : null}
+      {checked && exTr(lang, it) ? <div className="af-q-exp"><Lightbulb size={13} /> {exTr(lang, it)}</div> : null}
       {!checked ? (
         <button className="af-q-next" disabled={sel === null} onClick={check}>
-          Kontrol et <Check size={15} />
+          {t(lang, "common.check")} <Check size={15} />
         </button>
       ) : (
         <button className="af-q-next" onClick={next}>
-          {i + 1 < items.length ? <>Devam <ArrowRight size={15} /></> : <>Bitir <Check size={15} /></>}
+          {i + 1 < items.length ? <>{t(lang, "common.continue")} <ArrowRight size={15} /></> : <>{t(lang, "common.finish")} <Check size={15} /></>}
         </button>
       )}
       {footer}
@@ -767,7 +771,8 @@ function MCQRunner({ items, award, points = 15, onFinish, footer }) {
 /* ============================================================
    PLACEMENT TEST
 ============================================================ */
-export function Placement({ onDone }) {
+export function Placement({ onDone, onLang }) {
+  const lang = useLang();
   const [i, setI] = useState(0);
   const [sel, setSel] = useState(null);
   const [checked, setChecked] = useState(false);
@@ -799,9 +804,9 @@ export function Placement({ onDone }) {
     return (
       <div className="af-substage af-place">
         <div className="af-place-head">
-          <div className="af-boot"><span className="af-prompt-sym">›</span> seviye seç<span className="af-caret" /></div>
-          <h1 className="af-h1">Seviyeni seç.</h1>
-          <p className="af-lede">Seviyeni biliyorsan doğrudan seç — istediğin zaman seviye testini yeniden çözebilirsin.</p>
+          <div className="af-boot"><span className="af-prompt-sym">›</span> {t(lang, "pl.pickBoot")}<span className="af-caret" /></div>
+          <h1 className="af-h1">{t(lang, "pl.pickTitle")}</h1>
+          <p className="af-lede">{t(lang, "pl.pickLede")}</p>
         </div>
         <div className="af-levelpick">
           {LV_ORDER.map((lv) => {
@@ -809,12 +814,12 @@ export function Placement({ onDone }) {
             return (
               <button key={lv} className="af-levelpick-btn" onClick={() => onDone(lv)}>
                 <span className="af-levelpick-id">{lv}</span>
-                <span className="af-levelpick-label">{meta.label}</span>
+                <span className="af-levelpick-label">{pick(lang, meta.label, meta.label_en)}</span>
               </button>
             );
           })}
         </div>
-        <button className="af-place-back" onClick={() => setPicking(false)}><ChevronLeft size={14} /> teste dön</button>
+        <button className="af-place-back" onClick={() => setPicking(false)}><ChevronLeft size={14} /> {t(lang, "pl.backToTest")}</button>
       </div>
     );
   }
@@ -824,16 +829,14 @@ export function Placement({ onDone }) {
     return (
       <div className="af-substage af-place">
         <div className="af-result">
-          <div className="af-result-cap">SEVİYE TESPİTİ</div>
+          <div className="af-result-cap">{t(lang, "pl.resultCap")}</div>
           <div className="af-result-lv">{lv}</div>
-          <div className="af-result-label">{meta.label}</div>
-          <p className="af-result-blurb">{meta.blurb}</p>
-          <div className="af-result-score">{correct} / {pItems.length} doğru</div>
-          <p className="af-result-note">
-            Bu senin <b>başlangıç noktan</b> — sabit değil. Pratik ettikçe XP ve band yükselir, istediğinde testi tekrar çözebilirsin.
-          </p>
+          <div className="af-result-label">{pick(lang, meta.label, meta.label_en)}</div>
+          <p className="af-result-blurb">{pick(lang, meta.blurb, meta.blurb_en)}</p>
+          <div className="af-result-score">{t(lang, "pl.resultScore", { c: correct, n: pItems.length })}</div>
+          <p className="af-result-note">{t(lang, "pl.resultNote")}</p>
           <button className="af-q-next af-result-go" onClick={() => onDone(lv)}>
-            Kataloğa geç <ArrowRight size={16} />
+            {t(lang, "pl.toCatalog")} <ArrowRight size={16} />
           </button>
         </div>
       </div>
@@ -842,17 +845,23 @@ export function Placement({ onDone }) {
   return (
     <div className="af-substage af-place">
       <div className="af-place-head">
-        <div className="af-boot"><span className="af-prompt-sym">›</span> seviye tespiti<span className="af-caret" /></div>
-        <h1 className="af-h1">Seni doğru yerden başlatalım.</h1>
-        <p className="af-lede">Kısa sorular, kolaydan zora ve değişen tiplerde. Bir şık seç, istersen değiştir, sonra “Kontrol et”e bas — doğru ve yanlış cevabı gösteririm. Emin olmadığın soruyu “Boş bırak” ile geçebilirsin. Seviyeni testin sonunda söylerim.</p>
-        <button className="af-place-skiptest" onClick={() => setPicking(true)}>Seviyemi biliyorum — testi atla <ArrowRight size={14} /></button>
+        {onLang ? (
+          <div className="af-langsel">
+            <button className={"af-langsel-btn " + (lang !== "en" ? "is-on" : "")} onClick={() => onLang("tr")}>TR</button>
+            <button className={"af-langsel-btn " + (lang === "en" ? "is-on" : "")} onClick={() => onLang("en")}>EN</button>
+          </div>
+        ) : null}
+        <div className="af-boot"><span className="af-prompt-sym">›</span> {t(lang, "pl.boot")}<span className="af-caret" /></div>
+        <h1 className="af-h1">{t(lang, "pl.title")}</h1>
+        <p className="af-lede">{t(lang, "pl.lede")}</p>
+        <button className="af-place-skiptest" onClick={() => setPicking(true)}>{t(lang, "pl.knowLevel")} <ArrowRight size={14} /></button>
       </div>
       <div className="af-prog-track af-place-prog">
         <div className="af-prog-fill" style={{ width: ((i) / pItems.length) * 100 + "%" }} />
       </div>
       <div className="af-mcq">
-        <div className="af-q-prog">soru {i + 1} / {pItems.length}</div>
-        <div className="af-q-tag">{it.tag || "boşluk doldurma"}</div>
+        <div className="af-q-prog">{t(lang, "common.question", { i: i + 1, n: pItems.length })}</div>
+        <div className="af-q-tag">{tagLabel(lang, it.tag || "boşluk doldurma")}</div>
         <div className="af-q-text">{it.q}</div>
         <div className="af-mcq-opts">
           {it.opts.map((o, idx) => {
@@ -873,12 +882,12 @@ export function Placement({ onDone }) {
         </div>
         {!checked ? (
           <div className="af-place-actions">
-            <button className="af-q-next" disabled={sel === null} onClick={check}>Kontrol et <Check size={15} /></button>
-            <button className="af-place-skip" onClick={skip}>Boş bırak</button>
+            <button className="af-q-next" disabled={sel === null} onClick={check}>{t(lang, "common.check")} <Check size={15} /></button>
+            <button className="af-place-skip" onClick={skip}>{t(lang, "common.skipBlank")}</button>
           </div>
         ) : (
           <button className="af-q-next" onClick={next}>
-            {i + 1 < pItems.length ? <>Devam <ArrowRight size={15} /></> : <>Sonucu gör <Check size={15} /></>}
+            {i + 1 < pItems.length ? <>{t(lang, "common.continue")} <ArrowRight size={15} /></> : <>{t(lang, "common.seeResult")} <Check size={15} /></>}
           </button>
         )}
       </div>
@@ -900,6 +909,7 @@ const MODULE_ICON = {
   paraphrase: <RefreshCw size={20} />, errorhunt: <Scan size={20} />,
 };
 function ModuleCard({ k, ctx, go, done }) {
+  const lang = useLang();
   const info = MODULE_INFO[k];
   if (!info) return null;
   return (
@@ -908,16 +918,13 @@ function ModuleCard({ k, ctx, go, done }) {
         <span className={"af-card-icon af-ic-" + k}>{MODULE_ICON[k]}</span>
         <span className="af-card-tag">{info.minLv}+</span>
       </div>
-      <div className="af-card-name">{info.name}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
-      <div className="af-card-desc">{info.sub}</div>
-      <div className="af-card-go">BAŞLAT <ArrowRight size={15} /></div>
+      <div className="af-card-name">{pick(lang, info.name, info.name_en)}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
+      <div className="af-card-desc">{pick(lang, info.sub, info.sub_en)}</div>
+      <div className="af-card-go">{t(lang, "common.begin")} <ArrowRight size={15} /></div>
     </button>
   );
 }
 
-const titleFor = (xp) =>
-  xp < 100 ? "Çırak" : xp < 500 ? "Öğrenci" : xp < 1500 ? "Araştırmacı"
-  : xp < 4000 ? "Akademisyen" : xp < 10000 ? "Üstat" : "Efsane";
 const doneCount = (s, pre) => Object.keys(s.done || {}).filter((k) => k.startsWith(pre)).length;
 const srsStarted = (s) => Object.values(s.srs || {}).filter((c) => c && c.reps >= 1).length;
 const srsMature = (s) => Object.values(s.srs || {}).filter((c) => c && c.interval >= 21).length;
@@ -925,87 +932,88 @@ const acc = (s) => (s.total > 0 ? s.correct / s.total : 0);
 
 const BADGES = [
   // — Başlangıç —
-  { id: "start",     cat: "Başlangıç", name: "İlk Adım",         desc: "Seviye testini tamamla",     ic: <Sparkles size={18} />,      test: (s) => s.level !== null },
-  { id: "firstq",    cat: "Başlangıç", name: "Buz Kırıldı",      desc: "İlk soruyu yanıtla",         ic: <Play size={18} />,          test: (s) => s.total >= 1 },
-  { id: "firstvoc",  cat: "Başlangıç", name: "Merhaba Kelime",   desc: "İlk kelimeyi çalış",         ic: <Repeat size={18} />,        test: (s) => srsStarted(s) >= 1 },
+  { id: "start",     cat: "Başlangıç", name: "İlk Adım", name_en: "First Step",         desc: "Seviye testini tamamla", desc_en: "Complete the placement test",     ic: <Sparkles size={18} />,      test: (s) => s.level !== null },
+  { id: "firstq",    cat: "Başlangıç", name: "Buz Kırıldı", name_en: "Ice Broken",      desc: "İlk soruyu yanıtla", desc_en: "Answer your first question",         ic: <Play size={18} />,          test: (s) => s.total >= 1 },
+  { id: "firstvoc",  cat: "Başlangıç", name: "Merhaba Kelime", name_en: "Hello Word",   desc: "İlk kelimeyi çalış", desc_en: "Study your first word",         ic: <Repeat size={18} />,        test: (s) => srsStarted(s) >= 1 },
 
   // — XP / İlerleme —
-  { id: "xp100",     cat: "XP / İlerleme", name: "Isınma Turu",  desc: "100 XP topla",               ic: <Zap size={18} />,           test: (s) => s.xp >= 100 },
-  { id: "xp500",     cat: "XP / İlerleme", name: "Çalışkan",     desc: "500 XP topla",               ic: <TrendingUp size={18} />,    test: (s) => s.xp >= 500 },
-  { id: "xp1500",    cat: "XP / İlerleme", name: "XP Canavarı",  desc: "1.500 XP topla",             ic: <Trophy size={18} />,        test: (s) => s.xp >= 1500 },
-  { id: "xp4000",    cat: "XP / İlerleme", name: "Akademisyen",  desc: "4.000 XP topla",             ic: <GraduationCap size={18} />, test: (s) => s.xp >= 4000 },
-  { id: "xp10000",   cat: "XP / İlerleme", name: "Efsane",       desc: "10.000 XP topla",            ic: <Gauge size={18} />,         test: (s) => s.xp >= 10000 },
+  { id: "xp100",     cat: "XP / İlerleme", name: "Isınma Turu", name_en: "Warm-up Lap",  desc: "100 XP topla", desc_en: "Collect 100 XP",               ic: <Zap size={18} />,           test: (s) => s.xp >= 100 },
+  { id: "xp500",     cat: "XP / İlerleme", name: "Çalışkan", name_en: "Hard Worker",     desc: "500 XP topla", desc_en: "Collect 500 XP",               ic: <TrendingUp size={18} />,    test: (s) => s.xp >= 500 },
+  { id: "xp1500",    cat: "XP / İlerleme", name: "XP Canavarı", name_en: "XP Monster",  desc: "1.500 XP topla", desc_en: "Collect 1,500 XP",             ic: <Trophy size={18} />,        test: (s) => s.xp >= 1500 },
+  { id: "xp4000",    cat: "XP / İlerleme", name: "Akademisyen", name_en: "Academic",  desc: "4.000 XP topla", desc_en: "Collect 4,000 XP",             ic: <GraduationCap size={18} />, test: (s) => s.xp >= 4000 },
+  { id: "xp10000",   cat: "XP / İlerleme", name: "Efsane", name_en: "Legend",       desc: "10.000 XP topla", desc_en: "Collect 10,000 XP",            ic: <Gauge size={18} />,         test: (s) => s.xp >= 10000 },
 
   // — Seri —
-  { id: "streak3",   cat: "Seri", name: "Seri Başlangıcı",       desc: "3 günlük seri",              ic: <Flame size={18} />,         test: (s) => s.streak.count >= 3 },
-  { id: "streak7",   cat: "Seri", name: "Haftalık İstikrar",     desc: "7 günlük seri",              ic: <Flame size={18} />,         test: (s) => s.streak.count >= 7 },
-  { id: "streak14",  cat: "Seri", name: "İki Hafta Dimdik",      desc: "14 günlük seri",             ic: <Flame size={18} />,         test: (s) => s.streak.count >= 14 },
-  { id: "streak30",  cat: "Seri", name: "Aylık Disiplin",        desc: "30 günlük seri",             ic: <Flame size={18} />,         test: (s) => s.streak.count >= 30 },
-  { id: "streak100", cat: "Seri", name: "Yüz Gün",               desc: "100 günlük seri",            ic: <Trophy size={18} />,        test: (s) => s.streak.count >= 100 },
+  { id: "streak3",   cat: "Seri", name: "Seri Başlangıcı", name_en: "Streak Starter",       desc: "3 günlük seri", desc_en: "3-day streak",              ic: <Flame size={18} />,         test: (s) => s.streak.count >= 3 },
+  { id: "streak7",   cat: "Seri", name: "Haftalık İstikrar", name_en: "Weekly Consistency",     desc: "7 günlük seri", desc_en: "7-day streak",              ic: <Flame size={18} />,         test: (s) => s.streak.count >= 7 },
+  { id: "streak14",  cat: "Seri", name: "İki Hafta Dimdik", name_en: "Two Weeks Strong",      desc: "14 günlük seri", desc_en: "14-day streak",             ic: <Flame size={18} />,         test: (s) => s.streak.count >= 14 },
+  { id: "streak30",  cat: "Seri", name: "Aylık Disiplin", name_en: "Monthly Discipline",        desc: "30 günlük seri", desc_en: "30-day streak",             ic: <Flame size={18} />,         test: (s) => s.streak.count >= 30 },
+  { id: "streak100", cat: "Seri", name: "Yüz Gün", name_en: "Hundred Days",               desc: "100 günlük seri", desc_en: "100-day streak",            ic: <Trophy size={18} />,        test: (s) => s.streak.count >= 100 },
 
   // — Kombo / Akış —
-  { id: "combo8",    cat: "Kombo / Akış", name: "Akış Ustası",   desc: "8'lik kombo yakala",         ic: <Star size={18} />,          test: (s) => s.bestCombo >= 8 },
-  { id: "combo15",   cat: "Kombo / Akış", name: "Kombo Kralı",   desc: "15'lik kombo yakala",        ic: <Star size={18} />,          test: (s) => s.bestCombo >= 15 },
-  { id: "combo25",   cat: "Kombo / Akış", name: "Durdurulamaz",  desc: "25'lik kombo yakala",        ic: <Zap size={18} />,           test: (s) => s.bestCombo >= 25 },
-  { id: "combo40",   cat: "Kombo / Akış", name: "Kusursuz Akış", desc: "40'lık kombo yakala",        ic: <Crosshair size={18} />,     test: (s) => s.bestCombo >= 40 },
+  { id: "combo8",    cat: "Kombo / Akış", name: "Akış Ustası", name_en: "Flow Master",   desc: "8'lik kombo yakala", desc_en: "Hit an 8 combo",         ic: <Star size={18} />,          test: (s) => s.bestCombo >= 8 },
+  { id: "combo15",   cat: "Kombo / Akış", name: "Kombo Kralı", name_en: "Combo King",   desc: "15'lik kombo yakala", desc_en: "Hit a 15 combo",        ic: <Star size={18} />,          test: (s) => s.bestCombo >= 15 },
+  { id: "combo25",   cat: "Kombo / Akış", name: "Durdurulamaz", name_en: "Unstoppable",  desc: "25'lik kombo yakala", desc_en: "Hit a 25 combo",        ic: <Zap size={18} />,           test: (s) => s.bestCombo >= 25 },
+  { id: "combo40",   cat: "Kombo / Akış", name: "Kusursuz Akış", name_en: "Flawless Flow", desc: "40'lık kombo yakala", desc_en: "Hit a 40 combo",        ic: <Crosshair size={18} />,     test: (s) => s.bestCombo >= 40 },
 
   // — Doğruluk —
-  { id: "acc80",     cat: "Doğruluk", name: "Keskin Nişancı",    desc: "%80 doğruluk (30+ soru)",    ic: <Target size={18} />,        test: (s) => s.total >= 30 && acc(s) >= 0.8 },
-  { id: "acc90",     cat: "Doğruluk", name: "Cerrah Hassasiyeti",desc: "%90 doğruluk (50+ soru)",    ic: <Crosshair size={18} />,     test: (s) => s.total >= 50 && acc(s) >= 0.9 },
-  { id: "acc95",     cat: "Doğruluk", name: "Hatasız Kâtip",     desc: "%95 doğruluk (100+ soru)",   ic: <Gauge size={18} />,         test: (s) => s.total >= 100 && acc(s) >= 0.95 },
+  { id: "acc80",     cat: "Doğruluk", name: "Keskin Nişancı", name_en: "Sharpshooter",    desc: "%80 doğruluk (30+ soru)", desc_en: "80% accuracy (30+ questions)",    ic: <Target size={18} />,        test: (s) => s.total >= 30 && acc(s) >= 0.8 },
+  { id: "acc90",     cat: "Doğruluk", name: "Cerrah Hassasiyeti", name_en: "Surgical Precision",desc: "%90 doğruluk (50+ soru)", desc_en: "90% accuracy (50+ questions)",    ic: <Crosshair size={18} />,     test: (s) => s.total >= 50 && acc(s) >= 0.9 },
+  { id: "acc95",     cat: "Doğruluk", name: "Hatasız Kâtip", name_en: "Flawless Scribe",     desc: "%95 doğruluk (100+ soru)", desc_en: "95% accuracy (100+ questions)",   ic: <Gauge size={18} />,         test: (s) => s.total >= 100 && acc(s) >= 0.95 },
 
   // — Kelime —
-  { id: "voc20",     cat: "Kelime", name: "Kelime Avcısı",       desc: "20 kelime çalış",            ic: <Repeat size={18} />,        test: (s) => srsStarted(s) >= 20 },
-  { id: "voc50",     cat: "Kelime", name: "Kelime Toplayıcısı",  desc: "50 kelime çalış",            ic: <Repeat size={18} />,        test: (s) => srsStarted(s) >= 50 },
-  { id: "voc100",    cat: "Kelime", name: "Sözlük Kurdu",        desc: "100 kelime çalış",           ic: <BookMarked size={18} />,    test: (s) => srsStarted(s) >= 100 },
-  { id: "voc250",    cat: "Kelime", name: "Kelime Hazinesi",     desc: "250 kelime çalış",           ic: <Layers size={18} />,        test: (s) => srsStarted(s) >= 250 },
-  { id: "voc500",    cat: "Kelime", name: "Yürüyen Sözlük",      desc: "500 kelime çalış",           ic: <Brain size={18} />,         test: (s) => srsStarted(s) >= 500 },
-  { id: "mat20",     cat: "Kelime", name: "Kalıcı Bellek",       desc: "20 kelimeyi uzun vadeye al", ic: <Brain size={18} />,         test: (s) => srsMature(s) >= 20 },
-  { id: "mat50",     cat: "Kelime", name: "Hafıza Sarayı",       desc: "50 kelimeyi kalıcı ezberle", ic: <Trophy size={18} />,        test: (s) => srsMature(s) >= 50 },
+  { id: "voc20",     cat: "Kelime", name: "Kelime Avcısı", name_en: "Word Hunter",       desc: "20 kelime çalış", desc_en: "Study 20 words",            ic: <Repeat size={18} />,        test: (s) => srsStarted(s) >= 20 },
+  { id: "voc50",     cat: "Kelime", name: "Kelime Toplayıcısı", name_en: "Word Collector",  desc: "50 kelime çalış", desc_en: "Study 50 words",            ic: <Repeat size={18} />,        test: (s) => srsStarted(s) >= 50 },
+  { id: "voc100",    cat: "Kelime", name: "Sözlük Kurdu", name_en: "Dictionary Worm",        desc: "100 kelime çalış", desc_en: "Study 100 words",           ic: <BookMarked size={18} />,    test: (s) => srsStarted(s) >= 100 },
+  { id: "voc250",    cat: "Kelime", name: "Kelime Hazinesi", name_en: "Treasure of Words",     desc: "250 kelime çalış", desc_en: "Study 250 words",           ic: <Layers size={18} />,        test: (s) => srsStarted(s) >= 250 },
+  { id: "voc500",    cat: "Kelime", name: "Yürüyen Sözlük", name_en: "Walking Dictionary",      desc: "500 kelime çalış", desc_en: "Study 500 words",           ic: <Brain size={18} />,         test: (s) => srsStarted(s) >= 500 },
+  { id: "mat20",     cat: "Kelime", name: "Kalıcı Bellek", name_en: "Long-Term Memory",       desc: "20 kelimeyi uzun vadeye al", desc_en: "Take 20 words long-term", ic: <Brain size={18} />,         test: (s) => srsMature(s) >= 20 },
+  { id: "mat50",     cat: "Kelime", name: "Hafıza Sarayı", name_en: "Memory Palace",       desc: "50 kelimeyi kalıcı ezberle", desc_en: "Memorise 50 words for good", ic: <Trophy size={18} />,        test: (s) => srsMature(s) >= 50 },
 
   // — Beceriler —
-  { id: "gram1",     cat: "Beceriler", name: "Gramer Çaylağı",   desc: "İlk gramer dersini bitir",   ic: <GraduationCap size={18} />, test: (s) => doneCount(s, "grammar:") >= 1 },
-  { id: "gram5",     cat: "Beceriler", name: "Gramer Mezunu",    desc: "5 gramer dersi bitir",       ic: <GraduationCap size={18} />, test: (s) => doneCount(s, "grammar:") >= 5 },
-  { id: "gram10",    cat: "Beceriler", name: "Gramer Profesörü", desc: "10 gramer dersi bitir",      ic: <Brain size={18} />,         test: (s) => doneCount(s, "grammar:") >= 10 },
-  { id: "lis1",      cat: "Beceriler", name: "İlk Dinleti",      desc: "İlk dinlemeyi tamamla",      ic: <Headphones size={18} />,    test: (s) => doneCount(s, "listening:") >= 1 },
-  { id: "lis3",      cat: "Beceriler", name: "Kulak Kabartan",   desc: "3 dinleme tamamla",          ic: <Headphones size={18} />,    test: (s) => doneCount(s, "listening:") >= 3 },
-  { id: "lis10",     cat: "Beceriler", name: "Keskin Kulak",     desc: "10 dinleme tamamla",         ic: <Volume2 size={18} />,       test: (s) => doneCount(s, "listening:") >= 10 },
-  { id: "wri1",      cat: "Beceriler", name: "Kalem Erbabı",     desc: "İlk yazma görevini bitir",   ic: <PenLine size={18} />,       test: (s) => doneCount(s, "writing:") >= 1 },
-  { id: "wri3",      cat: "Beceriler", name: "Üretken Yazar",    desc: "3 yazma görevi bitir",       ic: <PenLine size={18} />,       test: (s) => doneCount(s, "writing:") >= 3 },
-  { id: "art3",      cat: "Beceriler", name: "Sayfa Çeviren",    desc: "3 okuma parçası bitir",      ic: <BookOpen size={18} />,      test: (s) => doneCount(s, "article:") >= 3 },
-  { id: "art10",     cat: "Beceriler", name: "Kitap Kurdu",      desc: "10 okuma parçası bitir",     ic: <BookOpen size={18} />,      test: (s) => doneCount(s, "article:") >= 10 },
-  { id: "allskill",  cat: "Beceriler", name: "Çok Yönlü",        desc: "Her beceriden en az 1",      ic: <Award size={18} />,         test: (s) => doneCount(s, "grammar:") >= 1 && doneCount(s, "listening:") >= 1 && doneCount(s, "writing:") >= 1 && doneCount(s, "article:") >= 1 },
+  { id: "gram1",     cat: "Beceriler", name: "Gramer Çaylağı", name_en: "Grammar Rookie",   desc: "İlk gramer dersini bitir", desc_en: "Finish your first grammar lesson",   ic: <GraduationCap size={18} />, test: (s) => doneCount(s, "grammar:") >= 1 },
+  { id: "gram5",     cat: "Beceriler", name: "Gramer Mezunu", name_en: "Grammar Graduate",    desc: "5 gramer dersi bitir", desc_en: "Finish 5 grammar lessons",       ic: <GraduationCap size={18} />, test: (s) => doneCount(s, "grammar:") >= 5 },
+  { id: "gram10",    cat: "Beceriler", name: "Gramer Profesörü", name_en: "Grammar Professor", desc: "10 gramer dersi bitir", desc_en: "Finish 10 grammar lessons",      ic: <Brain size={18} />,         test: (s) => doneCount(s, "grammar:") >= 10 },
+  { id: "lis1",      cat: "Beceriler", name: "İlk Dinleti", name_en: "First Listen",      desc: "İlk dinlemeyi tamamla", desc_en: "Complete your first listening",      ic: <Headphones size={18} />,    test: (s) => doneCount(s, "listening:") >= 1 },
+  { id: "lis3",      cat: "Beceriler", name: "Kulak Kabartan", name_en: "Keen Listener",   desc: "3 dinleme tamamla", desc_en: "Complete 3 listenings",          ic: <Headphones size={18} />,    test: (s) => doneCount(s, "listening:") >= 3 },
+  { id: "lis10",     cat: "Beceriler", name: "Keskin Kulak", name_en: "Sharp Ear",     desc: "10 dinleme tamamla", desc_en: "Complete 10 listenings",         ic: <Volume2 size={18} />,       test: (s) => doneCount(s, "listening:") >= 10 },
+  { id: "wri1",      cat: "Beceriler", name: "Kalem Erbabı", name_en: "Penman",     desc: "İlk yazma görevini bitir", desc_en: "Finish your first writing task",   ic: <PenLine size={18} />,       test: (s) => doneCount(s, "writing:") >= 1 },
+  { id: "wri3",      cat: "Beceriler", name: "Üretken Yazar", name_en: "Prolific Writer",    desc: "3 yazma görevi bitir", desc_en: "Finish 3 writing tasks",       ic: <PenLine size={18} />,       test: (s) => doneCount(s, "writing:") >= 3 },
+  { id: "art3",      cat: "Beceriler", name: "Sayfa Çeviren", name_en: "Page Turner",    desc: "3 okuma parçası bitir", desc_en: "Finish 3 reading passages",      ic: <BookOpen size={18} />,      test: (s) => doneCount(s, "article:") >= 3 },
+  { id: "art10",     cat: "Beceriler", name: "Kitap Kurdu", name_en: "Bookworm",      desc: "10 okuma parçası bitir", desc_en: "Finish 10 reading passages",     ic: <BookOpen size={18} />,      test: (s) => doneCount(s, "article:") >= 10 },
+  { id: "allskill",  cat: "Beceriler", name: "Çok Yönlü", name_en: "All-Rounder",        desc: "Her beceriden en az 1", desc_en: "At least 1 in every skill",      ic: <Award size={18} />,         test: (s) => doneCount(s, "grammar:") >= 1 && doneCount(s, "listening:") >= 1 && doneCount(s, "writing:") >= 1 && doneCount(s, "article:") >= 1 },
 
   // — Hacim —
-  { id: "q100",      cat: "Hacim", name: "Yüz Soru",             desc: "100 soru yanıtla",           ic: <ListChecks size={18} />,    test: (s) => s.total >= 100 },
-  { id: "q500",      cat: "Hacim", name: "Maratoncu",            desc: "500 soru yanıtla",           ic: <Gauge size={18} />,         test: (s) => s.total >= 500 },
-  { id: "cor200",    cat: "Hacim", name: "İki Yüz İsabet",       desc: "200 doğru yanıt ver",        ic: <Check size={18} />,         test: (s) => s.correct >= 200 },
-  { id: "cor1000",   cat: "Hacim", name: "Bin İsabet",           desc: "1.000 doğru yanıt ver",      ic: <Trophy size={18} />,        test: (s) => s.correct >= 1000 },
-  { id: "day100",    cat: "Hacim", name: "Günün Hakkını Ver",    desc: "Bir günde 100 XP topla",     ic: <Flame size={18} />,         test: (s) => (s.daily && s.daily.xp >= 100) },
+  { id: "q100",      cat: "Hacim", name: "Yüz Soru", name_en: "Hundred Questions",             desc: "100 soru yanıtla", desc_en: "Answer 100 questions",           ic: <ListChecks size={18} />,    test: (s) => s.total >= 100 },
+  { id: "q500",      cat: "Hacim", name: "Maratoncu", name_en: "Marathoner",            desc: "500 soru yanıtla", desc_en: "Answer 500 questions",           ic: <Gauge size={18} />,         test: (s) => s.total >= 500 },
+  { id: "cor200",    cat: "Hacim", name: "İki Yüz İsabet", name_en: "Two Hundred Hits",       desc: "200 doğru yanıt ver", desc_en: "Give 200 correct answers",        ic: <Check size={18} />,         test: (s) => s.correct >= 200 },
+  { id: "cor1000",   cat: "Hacim", name: "Bin İsabet", name_en: "Thousand Hits",           desc: "1.000 doğru yanıt ver", desc_en: "Give 1,000 correct answers",      ic: <Trophy size={18} />,        test: (s) => s.correct >= 1000 },
+  { id: "day100",    cat: "Hacim", name: "Günün Hakkını Ver", name_en: "Seize the Day",    desc: "Bir günde 100 XP topla", desc_en: "Collect 100 XP in one day",     ic: <Flame size={18} />,         test: (s) => (s.daily && s.daily.xp >= 100) },
 
   // — Odak —
-  { id: "focus60",   cat: "Hacim", name: "Derin Çalışma",        desc: "Toplam 60 dk odak",          ic: <Timer size={18} />,         test: (s) => (s.focusMinutes || 0) >= 60 },
-  { id: "focus300",  cat: "Hacim", name: "Maraton Zihin",        desc: "Toplam 300 dk odak",         ic: <Flame size={18} />,         test: (s) => (s.focusMinutes || 0) >= 300 },
-  { id: "focus1000", cat: "Hacim", name: "Çelik İrade",          desc: "Toplam 1.000 dk odak",       ic: <Trophy size={18} />,        test: (s) => (s.focusMinutes || 0) >= 1000 },
+  { id: "focus60",   cat: "Hacim", name: "Derin Çalışma", name_en: "Deep Work",        desc: "Toplam 60 dk odak", desc_en: "60 min total focus",          ic: <Timer size={18} />,         test: (s) => (s.focusMinutes || 0) >= 60 },
+  { id: "focus300",  cat: "Hacim", name: "Maraton Zihin", name_en: "Marathon Mind",        desc: "Toplam 300 dk odak", desc_en: "300 min total focus",         ic: <Flame size={18} />,         test: (s) => (s.focusMinutes || 0) >= 300 },
+  { id: "focus1000", cat: "Hacim", name: "Çelik İrade", name_en: "Iron Will",          desc: "Toplam 1.000 dk odak", desc_en: "1,000 min total focus",       ic: <Trophy size={18} />,        test: (s) => (s.focusMinutes || 0) >= 1000 },
 ];
 
 // Gelişim Raporu — per-question-type accuracy (state.stats) + focus minutes (defensive)
 function ProgressReport({ state }) {
+  const lang = useLang();
   const stats = state.stats || {};
   const rows = Object.entries(stats).filter(([, v]) => v && v.t > 0).sort((a, b) => b[1].t - a[1].t);
   const focusMin = state.focusMinutes || 0;
   if (!rows.length && !focusMin) return null;
   return (
     <div className="af-report">
-      <div className="af-report-head"><BarChart3 size={15} /> Gelişim Raporu</div>
-      {focusMin ? <div className="af-report-focus"><Timer size={13} /> Toplam odak süresi: <b>{focusMin} dk</b></div> : null}
+      <div className="af-report-head"><BarChart3 size={15} /> {t(lang, "rep.title")}</div>
+      {focusMin ? <div className="af-report-focus"><Timer size={13} /> {t(lang, "rep.focus")} <b>{focusMin} {lang === "en" ? "min" : "dk"}</b></div> : null}
       {rows.length ? (
         <div className="af-report-list">
           {rows.map(([type, v]) => {
             const pct = Math.round((v.c / v.t) * 100);
             return (
               <div key={type} className="af-report-row">
-                <span className="af-report-type">{type}</span>
+                <span className="af-report-type">{qtypeLabel(lang, type)}</span>
                 <span className="af-report-acc">{v.c}/{v.t} · %{pct}</span>
                 <span className="af-task-bar"><i style={{ width: pct + "%" }} /></span>
               </div>
@@ -1018,13 +1026,14 @@ function ProgressReport({ state }) {
 }
 
 function Badges({ state }) {
+  const lang = useLang();
   const [open, setOpen] = useState(true);
   const earned = BADGES.filter((b) => b.test(state)).length;
   return (
     <div className="af-badges">
       <button className="af-badges-head" onClick={() => setOpen((v) => !v)}>
-        <Award size={15} /> Başarımlar
-        <span className="af-badges-title">{titleFor(state.xp)}</span>
+        <Award size={15} /> {t(lang, "bd.title")}
+        <span className="af-badges-title">{rankFor(state.xp, lang)}</span>
         <span className="af-badges-count">{earned}/{BADGES.length}</span>
         <ChevronRight size={14} className={open ? "af-rot" : ""} />
       </button>
@@ -1039,7 +1048,7 @@ function Badges({ state }) {
               return (
                 <div key={cat} className="af-badge-cat">
                   <div className="af-badge-cat-head">
-                    <span className="af-badge-cat-name">{cat}</span>
+                    <span className="af-badge-cat-name">{badgeCatLabel(lang, cat)}</span>
                     <span className="af-badge-cat-count">{got}/{list.length}</span>
                   </div>
                   <div className="af-badges-grid">
@@ -1048,8 +1057,8 @@ function Badges({ state }) {
                       return (
                         <div key={b.id} className={"af-badge " + (g ? "is-got" : "")}>
                           <span className="af-badge-ic">{g ? b.ic : <Lock size={16} />}</span>
-                          <span className="af-badge-name">{b.name}</span>
-                          <span className="af-badge-desc">{b.desc}</span>
+                          <span className="af-badge-name">{pick(lang, b.name, b.name_en)}</span>
+                          <span className="af-badge-desc">{pick(lang, b.desc, b.desc_en)}</span>
                         </div>
                       );
                     })}
@@ -1080,6 +1089,7 @@ function levelPct(level, state) {
 }
 
 export function Catalog({ store, go, content = {}, onFocus }) {
+  const lang = useLang();
   const { state, setLevel, setSetting } = store;
   const userLv = state.level || "A1";
   const theme = state.settings.theme || "dark";
@@ -1102,16 +1112,16 @@ export function Catalog({ store, go, content = {}, onFocus }) {
       <div className="af-cat-head">
         <div className="af-cat-badge">
           <span className="af-cat-badge-id">{userLv}</span>
-          <span className="af-cat-badge-label">{levelMeta(userLv).label}</span>
-          <button className="af-cat-retake" onClick={() => setLevel(null)} title="Seviye testini tekrar çöz">
-            <RotateCw size={12} /> seviye
+          <span className="af-cat-badge-label">{pick(lang, levelMeta(userLv).label, levelMeta(userLv).label_en)}</span>
+          <button className="af-cat-retake" onClick={() => setLevel(null)} title={t(lang, "cat.retakeTitle")}>
+            <RotateCw size={12} /> {t(lang, "cat.retake")}
           </button>
         </div>
         <div className="af-cat-stats">
-          <span className="af-cat-stat"><Flame size={13} /> {state.streak.count} gün</span>
+          <span className="af-cat-stat"><Flame size={13} /> {t(lang, "cat.days", { n: state.streak.count })}</span>
           <span className="af-cat-stat"><TrendingUp size={13} /> {state.xp} XP</span>
-          <span className="af-cat-stat"><Repeat size={13} /> {dueCount} tekrar</span>
-          <button className="af-theme-quick" title="Tema değiştir"
+          <span className="af-cat-stat"><Repeat size={13} /> {t(lang, "cat.reviews", { n: dueCount })}</span>
+          <button className="af-theme-quick" title={t(lang, "cat.themeTitle")}
             onClick={() => setSetting("theme", theme === "light" ? "dark" : "light")}>
             {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
           </button>
@@ -1122,9 +1132,9 @@ export function Catalog({ store, go, content = {}, onFocus }) {
         <div className="af-srs-cta-l">
           <Repeat size={18} />
           <div>
-            <div className="af-srs-cta-title">Günün kelime tekrarı</div>
+            <div className="af-srs-cta-title">{t(lang, "cat.srsTitle")}</div>
             <div className="af-srs-cta-sub">
-              {dueCount > 0 ? `${dueCount} kelime tekrara hazır` : freshCount > 0 ? `${freshCount} yeni kelime seni bekliyor` : "bugünlük tamam — yine de çalışabilirsin"}
+              {dueCount > 0 ? t(lang, "cat.srsDue", { n: dueCount }) : freshCount > 0 ? t(lang, "cat.srsFresh", { n: freshCount }) : t(lang, "cat.srsDone")}
             </div>
           </div>
         </div>
@@ -1135,15 +1145,15 @@ export function Catalog({ store, go, content = {}, onFocus }) {
         const today = new Date().toISOString().slice(0, 10);
         const dd = state.daily && state.daily.date === today ? state.daily : { vocab: 0, xp: 0, grammar: 0, listening: 0 };
         const tasks = [
-          { k: "vocab", ic: <Repeat size={14} />, label: "Kelime tekrar et", have: dd.vocab || 0, goal: 15 },
-          { k: "xp", ic: <TrendingUp size={14} />, label: "XP topla", have: dd.xp || 0, goal: 120 },
-          { k: "grammar", ic: <GraduationCap size={14} />, label: "Bir gramer dersi", have: dd.grammar || 0, goal: 1 },
-          { k: "listening", ic: <Headphones size={14} />, label: "Bir dinleme", have: dd.listening || 0, goal: 1 },
+          { k: "vocab", ic: <Repeat size={14} />, label: t(lang, "cat.taskVocab"), have: dd.vocab || 0, goal: 15 },
+          { k: "xp", ic: <TrendingUp size={14} />, label: t(lang, "cat.taskXp"), have: dd.xp || 0, goal: 120 },
+          { k: "grammar", ic: <GraduationCap size={14} />, label: t(lang, "cat.taskGrammar"), have: dd.grammar || 0, goal: 1 },
+          { k: "listening", ic: <Headphones size={14} />, label: t(lang, "cat.taskListening"), have: dd.listening || 0, goal: 1 },
         ];
         const doneN = tasks.filter((t) => t.have >= t.goal).length;
         return (
           <div className="af-daily">
-            <div className="af-daily-head"><Crosshair size={14} /> Günün Görevleri <span className="af-daily-prog">{doneN}/{tasks.length}</span></div>
+            <div className="af-daily-head"><Crosshair size={14} /> {t(lang, "cat.dailyHead")} <span className="af-daily-prog">{doneN}/{tasks.length}</span></div>
             <div className="af-daily-list">
               {tasks.map((t) => {
                 const ok = t.have >= t.goal;
@@ -1158,27 +1168,27 @@ export function Catalog({ store, go, content = {}, onFocus }) {
                 );
               })}
             </div>
-            {doneN === tasks.length ? <div className="af-daily-done">🎉 Günlük diyet tamam — serin güvende.</div> : null}
+            {doneN === tasks.length ? <div className="af-daily-done">{t(lang, "cat.dailyDone")}</div> : null}
           </div>
         );
       })()}
 
       {onFocus ? (
         <div className="af-focus-launch">
-          <span className="af-focus-launch-cap"><Target size={14} /> Odak Modu</span>
-          <button className="af-focus-btn" onClick={() => onFocus(25)}>25 dk</button>
-          <button className="af-focus-btn" onClick={() => onFocus(60)}>60 dk</button>
-          <button className="af-focus-btn" onClick={() => onFocus(120)}>120 dk maraton</button>
-          <span className="af-focus-launch-note">başlat — geri sayım + sekme uyarısı</span>
+          <span className="af-focus-launch-cap"><Target size={14} /> {t(lang, "cat.focusCap")}</span>
+          <button className="af-focus-btn" onClick={() => onFocus(25)}>{t(lang, "common.minute", { n: 25 })}</button>
+          <button className="af-focus-btn" onClick={() => onFocus(60)}>{t(lang, "common.minute", { n: 60 })}</button>
+          <button className="af-focus-btn" onClick={() => onFocus(120)}>{t(lang, "cat.focusMarathon")}</button>
+          <span className="af-focus-launch-note">{t(lang, "cat.focusNote")}</span>
         </div>
       ) : null}
 
       <div className="af-tabs">
         <button className={"af-tab " + (tab === "learn" ? "is-on" : "")} onClick={() => setTab("learn")}>
-          <GraduationCap size={15} /> Öğren — seviyene göre
+          <GraduationCap size={15} /> {t(lang, "cat.tabLearn")}
         </button>
         <button className={"af-tab " + (tab === "exam" ? "is-on" : "")} onClick={() => setTab("exam")}>
-          <Trophy size={15} /> Sınav modu
+          <Trophy size={15} /> {t(lang, "cat.tabExam")}
         </button>
       </div>
 
@@ -1190,12 +1200,12 @@ export function Catalog({ store, go, content = {}, onFocus }) {
                 className={"af-lvchip " + (l.id === learnLv ? "is-active " : "") + (l.id === userLv ? "is-you" : "")}
                 onClick={() => setLearnLv(l.id)}>
                 <span className="af-lvchip-id">{l.id}</span>
-                <span className="af-lvchip-label">{l.label}</span>
+                <span className="af-lvchip-label">{pick(lang, l.label, l.label_en)}</span>
                 <span className="af-lvchip-bar"><i style={{ width: levelPct(l.id, state) + "%" }} /></span>
               </button>
             ))}
           </div>
-          <p className="af-lvblurb">{levelMeta(learnLv).blurb}</p>
+          <p className="af-lvblurb">{pick(lang, levelMeta(learnLv).blurb, levelMeta(learnLv).blurb_en)}</p>
           <div className="af-grid">
             {learnModules.map((k) => (
               <ModuleCard key={k} k={k} ctx={{ level: learnLv }} go={go}
@@ -1212,22 +1222,22 @@ export function Catalog({ store, go, content = {}, onFocus }) {
               <div key={ex.id} className={"af-exam-card " + (locked ? "is-locked" : "")}>
                 <button className="af-exam-top" onClick={() => !locked && setOpenExam(open ? null : ex.id)}>
                   <div className="af-exam-id">
-                    <span className="af-exam-name">{ex.name}</span>
-                    {locked ? <span className="af-exam-soon"><Lock size={11} /> yakında</span>
-                      : <span className="af-exam-score">{ex.scoring}</span>}
+                    <span className="af-exam-name">{pick(lang, ex.name, ex.name_en)}</span>
+                    {locked ? <span className="af-exam-soon"><Lock size={11} /> {t(lang, "cat.soon")}</span>
+                      : <span className="af-exam-score">{pick(lang, ex.scoring, ex.scoring_en)}</span>}
                   </div>
-                  <div className="af-exam-skills">{ex.skills.join(" · ")}</div>
-                  <div className="af-exam-blurb">{ex.blurb}</div>
-                  {!locked ? <div className="af-exam-expand">{open ? "modülleri gizle" : "modülleri aç"} <ChevronRight size={13} className={open ? "af-rot" : ""} /></div> : null}
+                  <div className="af-exam-skills">{pick(lang, ex.skills, ex.skills_en).join(" · ")}</div>
+                  <div className="af-exam-blurb">{pick(lang, ex.blurb, ex.blurb_en)}</div>
+                  {!locked ? <div className="af-exam-expand">{open ? t(lang, "cat.modsHide") : t(lang, "cat.modsShow")} <ChevronRight size={13} className={open ? "af-rot" : ""} /></div> : null}
                 </button>
                 {open && !locked ? (
                   <>
                     {ex.fieldFilter ? (
                       <div className="af-fieldsel">
-                        <span className="af-fieldsel-cap"><Filter size={13} /> Alan</span>
-                        {[["genel", "Genel"], ["fen", "Fen"], ["saglik", "Sağlık"], ["sosyal", "Sosyal"]].map(([id, label]) => (
+                        <span className="af-fieldsel-cap"><Filter size={13} /> {t(lang, "cat.field")}</span>
+                        {["genel", "fen", "saglik", "sosyal"].map((id) => (
                           <button key={id} className={"af-fieldsel-btn " + (examField === id ? "is-on" : "")}
-                            onClick={() => setExamField(id)}>{label}</button>
+                            onClick={() => setExamField(id)}>{fieldLabel(lang, id)}</button>
                         ))}
                       </div>
                     ) : null}
@@ -1252,34 +1262,39 @@ export function Catalog({ store, go, content = {}, onFocus }) {
         <label className="af-toggle">
           <input type="checkbox" checked={state.settings.sound}
             onChange={(e) => setSetting("sound", e.target.checked)} />
-          <span><Volume2 size={13} /> Dinleme sesi (tarayıcı TTS)</span>
+          <span><Volume2 size={13} /> {t(lang, "cat.soundLabel")}</span>
         </label>
         <div className="af-theme">
-          <span className="af-theme-cap"><Sun size={13} /> Tema</span>
+          <span className="af-theme-cap"><Sun size={13} /> {t(lang, "cat.theme")}</span>
           <div className="af-seg">
-            <button className={"af-seg-btn " + (theme === "dark" ? "is-on" : "")} onClick={() => setSetting("theme", "dark")}><Moon size={12} /> Koyu</button>
-            <button className={"af-seg-btn " + (theme === "light" ? "is-on" : "")} onClick={() => setSetting("theme", "light")}><Sun size={12} /> Açık</button>
+            <button className={"af-seg-btn " + (theme === "dark" ? "is-on" : "")} onClick={() => setSetting("theme", "dark")}><Moon size={12} /> {t(lang, "cat.dark")}</button>
+            <button className={"af-seg-btn " + (theme === "light" ? "is-on" : "")} onClick={() => setSetting("theme", "light")}><Sun size={12} /> {t(lang, "cat.light")}</button>
+          </div>
+        </div>
+        <div className="af-theme">
+          <span className="af-theme-cap"><LanguagesIcon size={13} /> {t(lang, "cat.lang")}</span>
+          <div className="af-seg">
+            <button className={"af-seg-btn " + (lang !== "en" ? "is-on" : "")} onClick={() => setSetting("lang", "tr")}>Türkçe</button>
+            <button className={"af-seg-btn " + (lang === "en" ? "is-on" : "")} onClick={() => setSetting("lang", "en")}>English</button>
           </div>
         </div>
         <div className="af-keyrow">
-          <label className="af-keylabel"><Sparkles size={13} /> AI yazma puanlaması — Anthropic API anahtarı (isteğe bağlı)</label>
+          <label className="af-keylabel"><Sparkles size={13} /> {t(lang, "cat.aiKeyLabel")}</label>
           <input className="af-keyinput" type="password" autoComplete="off" spellCheck={false}
             value={state.settings.apiKey} placeholder="sk-ant-…"
             onChange={(e) => setSetting("apiKey", e.target.value.trim())} />
-          <div className="af-keynote">
-            Yalnızca bu tarayıcıda saklanır, sunucuya gönderilmez. Yazma Stüdyosu’nda “AI ile değerlendir” açılır. Ücret kendi hesabından işler; boş bırakırsan otomatik analiz yine çalışır.
-          </div>
+          <div className="af-keynote">{t(lang, "cat.aiKeyNote")}</div>
         </div>
         <div className="af-keyrow">
-          <label className="af-keylabel"><RefreshCw size={13} /> İçerik kaynağı — content.json URL (isteğe bağlı)</label>
+          <label className="af-keylabel"><RefreshCw size={13} /> {t(lang, "cat.contentLabel")}</label>
           <input className="af-keyinput" type="text" autoComplete="off" spellCheck={false}
             value={state.settings.contentUrl} placeholder="https://raw.githubusercontent.com/…/content.json"
             onChange={(e) => setSetting("contentUrl", e.target.value.trim())} />
           <div className="af-content-foot">
-            {content.reload ? <button className="af-content-reload" onClick={content.reload}><RotateCw size={12} /> yenile</button> : null}
-            {content.msg ? <span className="af-content-msg">{content.msg}</span> : null}
+            {content.reload ? <button className="af-content-reload" onClick={content.reload}><RotateCw size={12} /> {t(lang, "cat.reload")}</button> : null}
+            {content.msg ? <span className="af-content-msg">{typeof content.msg === "string" ? content.msg : t(lang, content.msg.k, content.msg.vars)}</span> : null}
           </div>
-          <div className="af-keynote">Buradaki makale / dinleme / kelime içeriği açılışta yüklenir. Dosyayı (örn. GitHub’da) güncellediğinde herkeste değişir; index’i yeniden yüklemen gerekmez.</div>
+          <div className="af-keynote">{t(lang, "cat.contentNote")}</div>
         </div>
       </div>
     </div>
@@ -1290,6 +1305,7 @@ export function Catalog({ store, go, content = {}, onFocus }) {
    VOCAB REVIEW  (SRS flashcards)
 ============================================================ */
 export function VocabReview({ store, onBack }) {
+  const lang = useLang();
   const { state, gradeCard, touchStreak, bumpDaily } = store;
   const queue = useMemo(() => {
     const deck = [...vocabForLevel(state.level || "A1")].sort((a, b) => lvIndex(a.lv) - lvIndex(b.lv));
@@ -1311,13 +1327,13 @@ export function VocabReview({ store, onBack }) {
   if (done || !card) {
     return (
       <>
-        <ModuleBar title="Kelime Hazinesi" sub="aralıklı tekrar" onBack={onBack} />
+        <ModuleBar title={pick(lang, MODULE_INFO.vocab.name, MODULE_INFO.vocab.name_en)} sub={pick(lang, MODULE_INFO.vocab.sub, MODULE_INFO.vocab.sub_en)} onBack={onBack} />
         <div className="af-substage">
           <div className="af-result">
-            <div className="af-result-cap">TEKRAR BİTTİ</div>
+            <div className="af-result-cap">{t(lang, "vr.doneCap")}</div>
             <Trophy size={40} className="af-result-trophy" />
-            <p className="af-result-blurb">{queue.length} kelime çalıştın. Zoru ‘bilmiyorum’ dediğin kelimeler yarın yeniden karşına gelecek.</p>
-            <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
+            <p className="af-result-blurb">{t(lang, "vr.doneBlurb", { n: queue.length })}</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         </div>
       </>
@@ -1325,14 +1341,14 @@ export function VocabReview({ store, onBack }) {
   }
   return (
     <>
-      <ModuleBar title="Kelime Hazinesi" sub="aralıklı tekrar (SRS)" onBack={onBack}
+      <ModuleBar title={pick(lang, MODULE_INFO.vocab.name, MODULE_INFO.vocab.name_en)} sub={pick(lang, MODULE_INFO.vocab.sub, MODULE_INFO.vocab.sub_en)} onBack={onBack}
         right={<span className="af-modbar-count">{pos + 1}/{queue.length}</span>} />
       <div className="af-substage">
         <div className="af-srs">
           <div className="af-srs-lv">{card.lv} · {card.pos}</div>
           <div className="af-srs-word">{card.w}</div>
           {!show ? (
-            <button className="af-srs-reveal" onClick={() => setShow(true)}><Eye size={15} /> Anlamı göster</button>
+            <button className="af-srs-reveal" onClick={() => setShow(true)}><Eye size={15} /> {t(lang, "vr.reveal")}</button>
           ) : (
             <div className="af-srs-back">
               <div className="af-srs-tr">{card.tr}</div>
@@ -1341,9 +1357,9 @@ export function VocabReview({ store, onBack }) {
           )}
           {show ? (
             <div className="af-srs-grades">
-              <button className="af-srs-grade is-again" onClick={() => grade("again")}>Bilmiyorum</button>
-              <button className="af-srs-grade is-good" onClick={() => grade("good")}>Hatırladım</button>
-              <button className="af-srs-grade is-easy" onClick={() => grade("easy")}>Kolay</button>
+              <button className="af-srs-grade is-again" onClick={() => grade("again")}>{t(lang, "vr.again")}</button>
+              <button className="af-srs-grade is-good" onClick={() => grade("good")}>{t(lang, "vr.good")}</button>
+              <button className="af-srs-grade is-easy" onClick={() => grade("easy")}>{t(lang, "vr.easy")}</button>
             </div>
           ) : null}
         </div>
@@ -1357,6 +1373,7 @@ export function VocabReview({ store, onBack }) {
    reads VOCAB live so content.json additions appear too)
 ============================================================ */
 export function WordListRoom({ store, onBack }) {
+  const lang = useLang();
   const [lv, setLv] = useState(store.state.level || "A1");
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(60);
@@ -1383,7 +1400,7 @@ export function WordListRoom({ store, onBack }) {
 
   return (
     <>
-      <ModuleBar title="Kelime Listesi" sub="seviye seviye tüm kelimeler" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.wordlist.name, MODULE_INFO.wordlist.name_en)} sub={pick(lang, MODULE_INFO.wordlist.sub, MODULE_INFO.wordlist.sub_en)} onBack={onBack} />
       <div className="af-substage">
         <div className="af-wl-levels">
           {LV_ORDER.map((id) => (
@@ -1395,15 +1412,15 @@ export function WordListRoom({ store, onBack }) {
         </div>
         <input className="af-wl-search" type="text" value={query} spellCheck={false}
           onChange={(e) => { setQuery(e.target.value); setLimit(60); }}
-          placeholder={"Ara — " + lv + " seviyesinde kelime ya da anlam…"} />
+          placeholder={t(lang, "wl.search", { lv })} />
 
         {filtered.length === 0 ? (
           <div className="af-empty"><AlertTriangle size={14} /> {all.length === 0
-            ? lv + " seviyesinde henüz kelime yok — içerik kaynağından (content.json) eklenebilir."
-            : "Aramana uyan kelime bulunamadı."}</div>
+            ? t(lang, "wl.emptyLevel", { lv })
+            : t(lang, "wl.noMatch")}</div>
         ) : (
           <>
-            <div className="af-wl-count">{filtered.length} kelime{query ? " (filtreli)" : ""}</div>
+            <div className="af-wl-count">{t(lang, "wl.count", { n: filtered.length })}{query ? " " + t(lang, "wl.filtered") : ""}</div>
             <div className="af-wl-list">
               {filtered.slice(0, limit).map((v) => (
                 <div key={v.id} className="af-wl-row">
@@ -1418,7 +1435,7 @@ export function WordListRoom({ store, onBack }) {
             </div>
             {filtered.length > limit ? (
               <button className="af-wl-more" onClick={() => setLimit((n) => n + 60)}>
-                daha fazla göster ({filtered.length - limit})
+                {t(lang, "wl.more", { n: filtered.length - limit })}
               </button>
             ) : null}
           </>
@@ -1432,6 +1449,7 @@ export function WordListRoom({ store, onBack }) {
    GRAMMAR
 ============================================================ */
 export function GrammarHub({ level, store, award, onBack }) {
+  const lang = useLang();
   const [open, setOpen] = useState(null);
   const lessons = useMemo(() => {
     const f = GRAMMAR.filter((l) => !level || lvIndex(l.lv) <= lvIndex(level));
@@ -1440,7 +1458,7 @@ export function GrammarHub({ level, store, award, onBack }) {
   if (open) return <GrammarLesson lesson={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
-      <ModuleBar title="Gramer Atölyesi" sub={level ? level + " ve altı" : "tüm seviyeler"} onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.grammar.name, MODULE_INFO.grammar.name_en)} sub={level ? t(lang, "gr.subLevel", { lv: level }) : t(lang, "gr.subAll")} onBack={onBack} />
       <div className="af-substage">
         <div className="af-grid">
           {lessons.map((l) => {
@@ -1452,8 +1470,8 @@ export function GrammarHub({ level, store, award, onBack }) {
                   <span className="af-card-tag">{l.lv}</span>
                 </div>
                 <div className="af-card-name">{l.title}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
-                <div className="af-card-desc">{l.items.length} alıştırma</div>
-                <div className="af-card-go">AÇ <ArrowRight size={15} /></div>
+                <div className="af-card-desc">{t(lang, "gr.nEx", { n: l.items.length })}</div>
+                <div className="af-card-go">{t(lang, "common.open")} <ArrowRight size={15} /></div>
               </button>
             );
           })}
@@ -1463,26 +1481,27 @@ export function GrammarHub({ level, store, award, onBack }) {
   );
 }
 function GrammarLesson({ lesson, store, award, onBack }) {
+  const lang = useLang();
   const [stage, setStage] = useState("read"); // read -> practice -> done
   const [score, setScore] = useState(0);
   return (
     <>
-      <ModuleBar title={lesson.title} sub={"Gramer · " + lesson.lv} onBack={onBack} />
+      <ModuleBar title={lesson.title} sub={t(lang, "gr.sub", { lv: lesson.lv })} onBack={onBack} />
       <div className="af-substage">
         {stage === "read" ? (
           <div className="af-lesson">
-            <div className="af-lesson-exp">{lesson.exp}</div>
-            <button className="af-q-next" onClick={() => setStage("practice")}>Alıştırmalara geç <ArrowRight size={15} /></button>
+            <div className="af-lesson-exp">{pick(lang, lesson.exp, lesson.exp_en)}</div>
+            <button className="af-q-next" onClick={() => setStage("practice")}>{t(lang, "gr.toPractice")} <ArrowRight size={15} /></button>
           </div>
         ) : stage === "practice" ? (
           <MCQRunner items={lesson.items} award={award} points={15}
             onFinish={(ok) => { setScore(ok); store.markDone("grammar:" + lesson.id); store.touchStreak(); store.bumpDaily("grammar"); setStage("done"); }} />
         ) : (
           <div className="af-result">
-            <div className="af-result-cap">DERS TAMAM</div>
+            <div className="af-result-cap">{t(lang, "gr.doneCap")}</div>
             <div className="af-result-lv">{score}/{lesson.items.length}</div>
-            <p className="af-result-blurb">{lesson.title} işaretlendi. İstediğinde tekrar çözebilirsin.</p>
-            <button className="af-q-next af-result-go" onClick={onBack}>Diğer dersler <ArrowRight size={16} /></button>
+            <p className="af-result-blurb">{t(lang, "gr.doneBlurb", { t: lesson.title })}</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "gr.others")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -1510,6 +1529,7 @@ function renderScript(script) {
 }
 
 export function ListeningRoom({ level, store, award, onBack }) {
+  const lang = useLang();
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
     const f = LISTENING.filter((l) => !level || lvIndex(l.lv) <= lvIndex(level));
@@ -1518,9 +1538,9 @@ export function ListeningRoom({ level, store, award, onBack }) {
   if (open) return <ListeningItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
-      <ModuleBar title="Dinleme Odası" sub="sesli metin + sorular" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.listening.name, MODULE_INFO.listening.name_en)} sub={pick(lang, MODULE_INFO.listening.sub, MODULE_INFO.listening.sub_en)} onBack={onBack} />
       <div className="af-substage">
-        {!speechSupported() ? <div className="af-empty"><AlertTriangle size={14} /> Tarayıcın sesli okumayı desteklemiyor; transkripti okuyarak yine de çözebilirsin.</div> : null}
+        {!speechSupported() ? <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "li.noTTS")}</div> : null}
         <div className="af-grid">
           {items.map((l) => {
             const done = !!store.state.done["listening:" + l.id];
@@ -1531,8 +1551,8 @@ export function ListeningRoom({ level, store, award, onBack }) {
                   <span className="af-card-tag">{l.lv}</span>
                 </div>
                 <div className="af-card-name">{l.title}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
-                <div className="af-card-desc">{l.items.length} soru · {l.accent === "en-GB" ? "İngiliz" : "Amerikan"} aksanı</div>
-                <div className="af-card-go">DİNLE <ArrowRight size={15} /></div>
+                <div className="af-card-desc">{t(lang, "common.nQuestions", { n: l.items.length })} · {l.accent === "en-GB" ? t(lang, "li.accentUK") : t(lang, "li.accentUS")}</div>
+                <div className="af-card-go">{t(lang, "common.listen")} <ArrowRight size={15} /></div>
               </button>
             );
           })}
@@ -1542,6 +1562,7 @@ export function ListeningRoom({ level, store, award, onBack }) {
   );
 }
 function ListeningItem({ item, store, award, onBack }) {
+  const lang = useLang();
   const [playing, setPlaying] = useState(false);
   const [showT, setShowT] = useState(false);
   const [phase, setPhase] = useState("listen"); // listen -> quiz -> done
@@ -1556,7 +1577,7 @@ function ListeningItem({ item, store, award, onBack }) {
   }
   return (
     <>
-      <ModuleBar title={item.title} sub={"Dinleme · " + item.lv} onBack={onBack} />
+      <ModuleBar title={item.title} sub={t(lang, "li.sub", { lv: item.lv })} onBack={onBack} />
       <div className="af-substage">
         {phase !== "done" ? (
           <div className="af-play">
@@ -1565,12 +1586,12 @@ function ListeningItem({ item, store, award, onBack }) {
                 {playing ? <Pause size={22} /> : <Play size={22} />}
               </button>
               <div className="af-play-info">
-                <div className="af-play-title"><Volume2 size={14} /> {playing ? "oynatılıyor…" : "dinle"}</div>
-                <div className="af-play-sub">istediğin kadar tekrar dinleyebilirsin</div>
+                <div className="af-play-title"><Volume2 size={14} /> {playing ? t(lang, "li.playing") : t(lang, "li.play")}</div>
+                <div className="af-play-sub">{t(lang, "li.replay")}</div>
               </div>
             </div>
             <button className="af-transcript-toggle" onClick={() => setShowT((v) => !v)}>
-              {showT ? <><EyeOff size={13} /> transkripti gizle</> : <><Eye size={13} /> transkripti göster</>}
+              {showT ? <><EyeOff size={13} /> {t(lang, "li.hideT")}</> : <><Eye size={13} /> {t(lang, "li.showT")}</>}
             </button>
             {showT ? renderScript(item.script) : null}
           </div>
@@ -1578,20 +1599,20 @@ function ListeningItem({ item, store, award, onBack }) {
 
         {phase !== "done" ? (
           <textarea className="af-notes" value={notes} onChange={(e) => setNotes(e.target.value)}
-            placeholder="Not defteri — dinlerken anahtar kelimeleri yaz (kaydedilmez, TOEFL'da olduğu gibi notla çöz)" />
+            placeholder={t(lang, "li.notes")} />
         ) : null}
 
         {phase === "listen" ? (
-          <button className="af-q-next af-listen-go" onClick={() => setPhase("quiz")}>Sorulara geç <ArrowRight size={15} /></button>
+          <button className="af-q-next af-listen-go" onClick={() => setPhase("quiz")}>{t(lang, "common.toQuestions")} <ArrowRight size={15} /></button>
         ) : phase === "quiz" ? (
           <MCQRunner items={item.items} award={award} points={18}
             onFinish={(ok) => { setScore(ok); store.markDone("listening:" + item.id); store.touchStreak(); store.bumpDaily("listening"); setPhase("done"); }} />
         ) : (
           <div className="af-result">
-            <div className="af-result-cap">DİNLEME TAMAM</div>
+            <div className="af-result-cap">{t(lang, "li.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.items.length}</div>
-            <p className="af-result-blurb">Anlamadığın yer olduysa transkripti açıp tekrar dinle — kulak aşinalığı tekrarla gelir.</p>
-            <button className="af-q-next af-result-go" onClick={onBack}>Diğer kayıtlar <ArrowRight size={16} /></button>
+            <p className="af-result-blurb">{t(lang, "li.doneBlurb")}</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "li.others")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -1603,6 +1624,7 @@ function ListeningItem({ item, store, award, onBack }) {
    WRITING  (prompt + rubric + self-check; no AI scoring yet)
 ============================================================ */
 export function WritingStudio({ level, store, award, onBack }) {
+  const lang = useLang();
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
     const f = WRITING.filter((w) => !level || lvIndex(w.lv) <= lvIndex(level) + 1);
@@ -1611,7 +1633,7 @@ export function WritingStudio({ level, store, award, onBack }) {
   if (open) return <WritingItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
-      <ModuleBar title="Yazma Stüdyosu" sub="görev + rubrik" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.writing.name, MODULE_INFO.writing.name_en)} sub={pick(lang, MODULE_INFO.writing.sub, MODULE_INFO.writing.sub_en)} onBack={onBack} />
       <div className="af-substage">
         <div className="af-grid">
           {items.map((w) => {
@@ -1622,9 +1644,9 @@ export function WritingStudio({ level, store, award, onBack }) {
                   <span className="af-card-icon af-ic-writing"><PenLine size={20} /></span>
                   <span className="af-card-tag">{w.lv}</span>
                 </div>
-                <div className="af-card-name">{w.type}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
-                <div className="af-card-desc">{w.exam.join(", ")} · min {w.minWords} kelime</div>
-                <div className="af-card-go">YAZ <ArrowRight size={15} /></div>
+                <div className="af-card-name">{pick(lang, w.type, w.type_en)}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
+                <div className="af-card-desc">{w.exam.join(", ")} · {t(lang, "wr.minWords", { n: w.minWords })}</div>
+                <div className="af-card-go">{t(lang, "common.write")} <ArrowRight size={15} /></div>
               </button>
             );
           })}
@@ -1634,6 +1656,7 @@ export function WritingStudio({ level, store, award, onBack }) {
   );
 }
 function WritingItem({ item, store, award, onBack }) {
+  const lang = useLang();
   const [text, setText] = useState("");
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const enough = words >= item.minWords;
@@ -1652,43 +1675,43 @@ function WritingItem({ item, store, award, onBack }) {
     store.bumpDaily("writing");
     award(40, true);
   }
-  function runAnalysis() { setAnalysis(analyzeWriting(text, item)); }
+  function runAnalysis() { setAnalysis(analyzeWriting(text, item, lang)); }
   async function runAI() {
     if (!apiKey || aiLoading || words < 5) return;
     setAiErr(null); setAiOut(null); setAiLoading(true);
     try {
-      const out = await scoreWithAI({ text, item, apiKey });
+      const out = await scoreWithAI({ text, item, apiKey, lang });
       setAiOut(out);
     } catch (e) {
-      setAiErr(e.message || "İstek başarısız oldu.");
+      setAiErr(e.message || t(lang, "ti.evalFail"));
     } finally { setAiLoading(false); }
   }
 
   return (
     <>
-      <ModuleBar title={item.type} sub={"Yazma · " + item.lv} onBack={onBack} />
+      <ModuleBar title={pick(lang, item.type, item.type_en)} sub={t(lang, "wr.sub", { lv: item.lv })} onBack={onBack} />
       <div className="af-substage af-write">
-        <div className="af-write-prompt"><span className="af-write-cap">GÖREV</span> {item.prompt}</div>
+        <div className="af-write-prompt"><span className="af-write-cap">{t(lang, "wr.task")}</span> {item.prompt}</div>
         <div className="af-write-tips"><Lightbulb size={13} /> {item.tips}</div>
-        <div className="af-write-struct"><span className="af-write-cap">İSKELET</span> {item.structure}</div>
+        <div className="af-write-struct"><span className="af-write-cap">{t(lang, "wr.skeleton")}</span> {item.structure}</div>
         <textarea className="af-write-area" value={text} onChange={(e) => setText(e.target.value)}
-          placeholder="Cevabını buraya yaz…" />
+          placeholder={t(lang, "wr.placeholder")} />
         <div className="af-write-meta">
-          <span className={enough ? "is-ok" : ""}>{words} / {item.minWords} kelime</span>
+          <span className={enough ? "is-ok" : ""}>{t(lang, "wr.wordCount", { w: words, n: item.minWords })}</span>
           {!submitted ? (
             <button className="af-q-next" disabled={!enough} onClick={submit}>
-              {enough ? <>Tamamladım <Check size={15} /></> : "biraz daha yaz…"}
+              {enough ? <>{t(lang, "wr.completed")} <Check size={15} /></> : t(lang, "wr.writeMore")}
             </button>
-          ) : <span className="af-write-done"><Check size={15} /> tamamlandı · +40 XP</span>}
+          ) : <span className="af-write-done"><Check size={15} /> {t(lang, "wr.done")}</span>}
         </div>
 
         <div className="af-score-row">
           <button className="af-score-btn" disabled={words < 5} onClick={runAnalysis}>
-            <Gauge size={15} /> Otomatik analiz
+            <Gauge size={15} /> {t(lang, "wr.autoAnalysis")}
           </button>
           {apiKey ? (
             <button className="af-score-btn is-ai" disabled={words < 5 || aiLoading} onClick={runAI}>
-              <Sparkles size={15} /> {aiLoading ? "değerlendiriliyor…" : "AI ile değerlendir"}
+              <Sparkles size={15} /> {aiLoading ? t(lang, "common.evaluating") : t(lang, "wr.aiEvaluate")}
             </button>
           ) : null}
         </div>
@@ -1697,14 +1720,14 @@ function WritingItem({ item, store, award, onBack }) {
           <div className="af-analysis">
             <div className="af-analysis-head">
               <span className="af-band">~{analysis.band}</span>
-              <span className="af-band-cap">tahmini band · otomatik ön analiz (resmî değil)</span>
+              <span className="af-band-cap">{t(lang, "wr.bandCap")}</span>
             </div>
             <div className="af-analysis-grid">
-              <span>{analysis.wc} kelime</span>
-              <span>{analysis.sc} cümle</span>
-              <span>{analysis.pc} paragraf</span>
-              <span>ort. {analysis.avgLen} kel./cümle</span>
-              <span>{analysis.linkersUsed.length} bağlaç</span>
+              <span>{t(lang, "wr.words", { n: analysis.wc })}</span>
+              <span>{t(lang, "wr.sentences", { n: analysis.sc })}</span>
+              <span>{t(lang, "wr.paras", { n: analysis.pc })}</span>
+              <span>{t(lang, "wr.avg", { n: analysis.avgLen })}</span>
+              <span>{t(lang, "wr.linkers", { n: analysis.linkersUsed.length })}</span>
             </div>
             <ul className="af-analysis-notes">
               {analysis.notes.map((n, i) => <li key={i}>{n}</li>)}
@@ -1714,16 +1737,13 @@ function WritingItem({ item, store, award, onBack }) {
 
         {aiErr ? (
           <div className="af-ai-err"><AlertTriangle size={14} /> {aiErr}
-            <div className="af-ai-err-hint">Anahtar geçersiz veya tarayıcı erişimi engellenmiş olabilir. Anahtarını ayarlardan kontrol et; otomatik analiz her zaman çalışır.</div>
+            <div className="af-ai-err-hint">{t(lang, "wr.aiErrHint")}</div>
           </div>
         ) : null}
         {aiOut ? <div className="af-ai-out">{aiOut}</div> : null}
 
         {!apiKey ? (
-          <div className="af-write-note">
-            Otomatik analiz uzunluk, paragraf, bağlaç ve tekrar gibi ölçütleri kontrol eder — kurulum gerektirmez.
-            Gerçek AI puanlaması istersen: katalogdaki ayarlardan kendi Anthropic API anahtarını ekle (anahtar yalnızca senin tarayıcında saklanır, ücret kendi hesabından işler).
-          </div>
+          <div className="af-write-note">{t(lang, "wr.note")}</div>
         ) : null}
       </div>
     </>
@@ -1735,6 +1755,7 @@ function WritingItem({ item, store, award, onBack }) {
    ARTICLES  (simple reading: passage + MCQs)
 ============================================================ */
 export function ArticleRoom({ level, store, award, onBack, exam, field }) {
+  const lang = useLang();
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
     let f = ARTICLES.filter((a) => !level || lvIndex(a.lv) <= lvIndex(level));
@@ -1744,10 +1765,10 @@ export function ArticleRoom({ level, store, award, onBack, exam, field }) {
   if (open) return <ArticleItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
-      <ModuleBar title="Okuma Parçaları" sub="makale + sorular" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.articles.name, MODULE_INFO.articles.name_en)} sub={pick(lang, MODULE_INFO.articles.sub, MODULE_INFO.articles.sub_en)} onBack={onBack} />
       <div className="af-substage">
         {ARTICLES.length === 0 ? (
-          <div className="af-empty"><AlertTriangle size={14} /> Henüz makale yok — içerik kaynağından (content.json) eklenebilir.</div>
+          <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "ar.empty")}</div>
         ) : null}
         <div className="af-grid">
           {items.map((a) => {
@@ -1759,8 +1780,8 @@ export function ArticleRoom({ level, store, award, onBack, exam, field }) {
                   <span className="af-card-tag">{a.lv}</span>
                 </div>
                 <div className="af-card-name">{a.title}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
-                <div className="af-card-desc">{a.items.length} soru</div>
-                <div className="af-card-go">OKU <ArrowRight size={15} /></div>
+                <div className="af-card-desc">{t(lang, "common.nQuestions", { n: a.items.length })}</div>
+                <div className="af-card-go">{t(lang, "common.read")} <ArrowRight size={15} /></div>
               </button>
             );
           })}
@@ -1770,27 +1791,28 @@ export function ArticleRoom({ level, store, award, onBack, exam, field }) {
   );
 }
 function ArticleItem({ item, store, award, onBack }) {
+  const lang = useLang();
   const [phase, setPhase] = useState("read"); // read -> quiz -> done
   const [score, setScore] = useState(0);
   const paras = item.body.split(/\n\s*\n/);
   return (
     <>
-      <ModuleBar title={item.title} sub={"Okuma · " + item.lv} onBack={onBack} />
+      <ModuleBar title={item.title} sub={t(lang, "ar.sub", { lv: item.lv })} onBack={onBack} />
       <div className="af-substage">
         {phase === "read" ? (
           <div className="af-article">
             {paras.map((para, idx) => <p key={idx} className="af-article-p">{para}</p>)}
-            <button className="af-q-next" onClick={() => setPhase("quiz")}>Sorulara geç <ArrowRight size={15} /></button>
+            <button className="af-q-next" onClick={() => setPhase("quiz")}>{t(lang, "common.toQuestions")} <ArrowRight size={15} /></button>
           </div>
         ) : phase === "quiz" ? (
           <MCQRunner items={item.items} award={award} points={16}
             onFinish={(ok) => { setScore(ok); store.markDone("article:" + item.id); store.touchStreak(); setPhase("done"); }} />
         ) : (
           <div className="af-result">
-            <div className="af-result-cap">OKUMA TAMAM</div>
+            <div className="af-result-cap">{t(lang, "ar.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.items.length}</div>
-            <p className="af-result-blurb">Yanlışların varsa metne dönüp ilgili yeri tekrar okuyabilirsin.</p>
-            <button className="af-q-next af-result-go" onClick={onBack}>Diğer parçalar <ArrowRight size={16} /></button>
+            <p className="af-result-blurb">{t(lang, "ar.doneBlurb")}</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ar.others")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -1804,6 +1826,7 @@ function ArticleItem({ item, store, award, onBack }) {
    Same shape as ARTICLES; blanks reuse the shared MCQRunner.
 ============================================================ */
 export function ClozeRoom({ level, store, award, onBack, exam, field }) {
+  const lang = useLang();
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
     let f = CLOZE.filter((c) => !level || lvIndex(c.lv) <= lvIndex(level));
@@ -1813,10 +1836,10 @@ export function ClozeRoom({ level, store, award, onBack, exam, field }) {
   if (open) return <ClozeItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
-      <ModuleBar title="Boşluk Doldurma" sub="YDS/YÖKDİL cloze" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.cloze.name, MODULE_INFO.cloze.name_en)} sub={pick(lang, MODULE_INFO.cloze.sub, MODULE_INFO.cloze.sub_en)} onBack={onBack} />
       <div className="af-substage">
         {CLOZE.length === 0 ? (
-          <div className="af-empty"><AlertTriangle size={14} /> Henüz cloze parçası yok — içerik kaynağından (content.json) eklenebilir.</div>
+          <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "cl.empty")}</div>
         ) : null}
         <div className="af-grid">
           {items.map((c) => {
@@ -1828,8 +1851,8 @@ export function ClozeRoom({ level, store, award, onBack, exam, field }) {
                   <span className="af-card-tag">{c.lv}</span>
                 </div>
                 <div className="af-card-name">{c.title}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
-                <div className="af-card-desc">{c.blanks.length} boşluk</div>
-                <div className="af-card-go">BAŞLA <ArrowRight size={15} /></div>
+                <div className="af-card-desc">{t(lang, "cl.nBlanks", { n: c.blanks.length })}</div>
+                <div className="af-card-go">{t(lang, "common.start")} <ArrowRight size={15} /></div>
               </button>
             );
           })}
@@ -1839,15 +1862,16 @@ export function ClozeRoom({ level, store, award, onBack, exam, field }) {
   );
 }
 function ClozeItem({ item, store, award, onBack }) {
+  const lang = useLang();
   const [phase, setPhase] = useState("read"); // read -> quiz -> done
   const [score, setScore] = useState(0);
   const paras = item.text.split(/\n\s*\n/);
   const quizItems = useMemo(
     () => item.blanks.map((b) => ({
-      q: "(" + b.n + ") numaralı boşluğa hangi seçenek gelmeli?",
-      opts: b.opts, ans: b.ans, tr: b.tr,
+      q: t(lang, "cl.q", { n: b.n }),
+      opts: b.opts, ans: b.ans, tr: b.tr, en: b.en,
     })),
-    [item]
+    [item, lang]
   );
   const passage = (
     <div className="af-cloze-ref">
@@ -1856,13 +1880,13 @@ function ClozeItem({ item, store, award, onBack }) {
   );
   return (
     <>
-      <ModuleBar title={item.title} sub={"Cloze · " + item.lv} onBack={onBack} />
+      <ModuleBar title={item.title} sub={t(lang, "cl.sub", { lv: item.lv })} onBack={onBack} />
       <div className="af-substage">
         {phase === "read" ? (
           <div className="af-cloze">
-            <p className="af-cloze-hint">Paragrafı oku; numaralı boşlukları (1)(2)… sonra sırayla dolduracaksın.</p>
+            <p className="af-cloze-hint">{t(lang, "cl.hint")}</p>
             {passage}
-            <button className="af-q-next" onClick={() => setPhase("quiz")}>Boşluklara geç <ArrowRight size={15} /></button>
+            <button className="af-q-next" onClick={() => setPhase("quiz")}>{t(lang, "cl.toBlanks")} <ArrowRight size={15} /></button>
           </div>
         ) : phase === "quiz" ? (
           <MCQRunner items={quizItems} award={award} points={16}
@@ -1870,10 +1894,10 @@ function ClozeItem({ item, store, award, onBack }) {
             onFinish={(ok) => { setScore(ok); store.markDone("cloze:" + item.id); store.touchStreak(); setPhase("done"); }} />
         ) : (
           <div className="af-result">
-            <div className="af-result-cap">CLOZE TAMAM</div>
+            <div className="af-result-cap">{t(lang, "cl.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.blanks.length}</div>
-            <p className="af-result-blurb">Yanlışların varsa paragrafa dönüp boşluğun çevresindeki ipuçlarını tekrar oku.</p>
-            <button className="af-q-next af-result-go" onClick={onBack}>Diğer parçalar <ArrowRight size={16} /></button>
+            <p className="af-result-blurb">{t(lang, "cl.doneBlurb")}</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ar.others")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -1887,26 +1911,27 @@ function ClozeItem({ item, store, award, onBack }) {
    A deck of stem sentences; reuses the shared MCQRunner.
 ============================================================ */
 export function RestateRoom({ level, store, award, onBack, exam, field }) {
+  const lang = useLang();
   const items = useMemo(() => {
     let f = RESTATE.filter((r) => !level || lvIndex(r.lv) <= lvIndex(level));
     f = byField(f, exam, field);
     return f.length ? f : RESTATE;
   }, [level, exam, field]);
   const quizItems = useMemo(
-    () => items.map((r) => ({ q: r.stem, opts: r.opts, ans: r.ans, tr: r.tr })),
+    () => items.map((r) => ({ q: r.stem, opts: r.opts, ans: r.ans, tr: r.tr, en: r.en })),
     [items]
   );
   const [phase, setPhase] = useState("quiz"); // quiz -> done
   const [score, setScore] = useState(0);
   return (
     <>
-      <ModuleBar title="Anlamca En Yakın Cümle" sub="YDS · restatement" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.restate.name, MODULE_INFO.restate.name_en)} sub={pick(lang, MODULE_INFO.restate.sub, MODULE_INFO.restate.sub_en)} onBack={onBack} />
       <div className="af-substage">
         {RESTATE.length === 0 ? (
-          <div className="af-empty"><AlertTriangle size={14} /> Henüz cümle yok — içerik kaynağından (content.json) eklenebilir.</div>
+          <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "rs.empty")}</div>
         ) : phase === "quiz" ? (
           <MCQRunner items={quizItems} award={award} points={16}
-            footer={<div className="af-restate-hint"><Replace size={13} /> Cümleye anlamca en yakın seçeneği işaretle.</div>}
+            footer={<div className="af-restate-hint"><Replace size={13} /> {t(lang, "rs.hint")}</div>}
             onFinish={(ok) => {
               setScore(ok);
               items.forEach((r) => store.markDone("restate:" + r.id));
@@ -1915,10 +1940,10 @@ export function RestateRoom({ level, store, award, onBack, exam, field }) {
             }} />
         ) : (
           <div className="af-result">
-            <div className="af-result-cap">RESTATEMENT TAMAM</div>
+            <div className="af-result-cap">{t(lang, "rs.doneCap")}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
-            <p className="af-result-blurb">Yanlışlarında köprü yapıyı (zıtlık, neden-sonuç, koşul, edilgen) tekrar gözden geçir.</p>
-            <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
+            <p className="af-result-blurb">{t(lang, "rs.doneBlurb")}</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -1934,6 +1959,7 @@ export function RestateRoom({ level, store, award, onBack, exam, field }) {
 ============================================================ */
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
 export function OddoutRoom({ level, store, award, onBack, exam, field }) {
+  const lang = useLang();
   const items = useMemo(() => {
     let f = ODDOUT.filter((o) => !level || lvIndex(o.lv) <= lvIndex(level));
     f = byField(f, exam, field);
@@ -1948,23 +1974,23 @@ export function OddoutRoom({ level, store, award, onBack, exam, field }) {
           ))}
         </div>
       ),
-      opts: o.sentences.map((_, i) => ROMAN[i] + ". cümle"),
+      opts: o.sentences.map((_, i) => t(lang, "oo.sentence", { r: ROMAN[i] })),
       ans: o.ans,
-      tr: o.tr,
+      tr: o.tr, en: o.en,
     })),
-    [items]
+    [items, lang]
   );
   const [phase, setPhase] = useState("quiz"); // quiz -> done
   const [score, setScore] = useState(0);
   return (
     <>
-      <ModuleBar title="Akışı Bozan Cümle" sub="YDS · irrelevant sentence" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.oddout.name, MODULE_INFO.oddout.name_en)} sub={pick(lang, MODULE_INFO.oddout.sub, MODULE_INFO.oddout.sub_en)} onBack={onBack} />
       <div className="af-substage">
         {ODDOUT.length === 0 ? (
-          <div className="af-empty"><AlertTriangle size={14} /> Henüz paragraf yok — içerik kaynağından (content.json) eklenebilir.</div>
+          <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "oo.empty")}</div>
         ) : phase === "quiz" ? (
           <MCQRunner items={quizItems} award={award} points={16}
-            footer={<div className="af-restate-hint"><Filter size={13} /> Paragrafın konusuna/akışına uymayan cümleyi seç.</div>}
+            footer={<div className="af-restate-hint"><Filter size={13} /> {t(lang, "oo.hint")}</div>}
             onFinish={(ok) => {
               setScore(ok);
               items.forEach((o) => store.markDone("oddout:" + o.id));
@@ -1973,10 +1999,10 @@ export function OddoutRoom({ level, store, award, onBack, exam, field }) {
             }} />
         ) : (
           <div className="af-result">
-            <div className="af-result-cap">TAMAM</div>
+            <div className="af-result-cap">{t(lang, "oo.doneCap")}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
-            <p className="af-result-blurb">İpucu: paragrafın ana konusunu belirle; o konuya katkı yapmayan, başka bir alana kayan cümle akışı bozar.</p>
-            <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
+            <p className="af-result-blurb">{t(lang, "oo.doneBlurb")}</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -1988,6 +2014,7 @@ export function OddoutRoom({ level, store, award, onBack, exam, field }) {
 /* shared : small deck runner for YDS-style single-question modules
    (each item = one MCQ). Mirrors RestateRoom/OddoutRoom exactly. */
 function DeckRoom({ title, sub, empty, quizItems, items, prefix, store, award, onBack, hint, doneCap }) {
+  const lang = useLang();
   const [phase, setPhase] = useState("quiz"); // quiz -> done
   const [score, setScore] = useState(0);
   return (
@@ -2009,8 +2036,8 @@ function DeckRoom({ title, sub, empty, quizItems, items, prefix, store, award, o
           <div className="af-result">
             <div className="af-result-cap">{doneCap}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
-            <p className="af-result-blurb">Yanlışlarında ipuçlarını (bağlam, bağlaç, anahtar kelimeler) yeniden gözden geçir.</p>
-            <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
+            <p className="af-result-blurb">{t(lang, "deck.doneBlurb")}</p>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -2022,6 +2049,7 @@ function DeckRoom({ title, sub, empty, quizItems, items, prefix, store, award, o
    DIALOGUE  (two-person dialogue completion — YDS)
 ============================================================ */
 export function DialogueRoom({ level, store, award, onBack, exam, field }) {
+  const lang = useLang();
   const items = useMemo(() => {
     let f = DIALOGUE.filter((d) => !level || lvIndex(d.lv) <= lvIndex(level));
     f = byField(f, exam, field);
@@ -2039,21 +2067,22 @@ export function DialogueRoom({ level, store, award, onBack, exam, field }) {
           ))}
         </div>
       ),
-      opts: d.opts, ans: d.ans, tr: d.tr,
+      opts: d.opts, ans: d.ans, tr: d.tr, en: d.en,
     })),
     [items]
   );
-  return <DeckRoom title="Diyalog Tamamlama" sub="YDS · dialogue completion"
-    empty="Henüz diyalog yok — içerik kaynağından (content.json) eklenebilir."
-    quizItems={quizItems} items={items} prefix="dialogue" doneCap="DİYALOG TAMAM"
+  return <DeckRoom title={pick(lang, MODULE_INFO.dialogue.name, MODULE_INFO.dialogue.name_en)} sub={pick(lang, MODULE_INFO.dialogue.sub, MODULE_INFO.dialogue.sub_en)}
+    empty={t(lang, "dl.empty")}
+    quizItems={quizItems} items={items} prefix="dialogue" doneCap={t(lang, "dl.doneCap")}
     store={store} onBack={onBack} award={award}
-    hint={<div className="af-restate-hint"><MessageSquare size={13} /> Boş repliğe en uygun cümleyi seç.</div>} />;
+    hint={<div className="af-restate-hint"><MessageSquare size={13} /> {t(lang, "dl.hint")}</div>} />;
 }
 
 /* ============================================================
    PARACOMP  (paragraph completion — YDS)
 ============================================================ */
 export function ParacompRoom({ level, store, award, onBack, exam, field }) {
+  const lang = useLang();
   const items = useMemo(() => {
     let f = PARACOMP.filter((p) => !level || lvIndex(p.lv) <= lvIndex(level));
     f = byField(f, exam, field);
@@ -2072,44 +2101,45 @@ export function ParacompRoom({ level, store, award, onBack, exam, field }) {
             )}
           </p>
         ),
-        opts: p.opts, ans: p.ans, tr: p.tr,
+        opts: p.opts, ans: p.ans, tr: p.tr, en: p.en,
       };
     }),
     [items]
   );
-  return <DeckRoom title="Paragraf Tamamlama" sub="YDS · paragraph completion"
-    empty="Henüz paragraf yok — içerik kaynağından (content.json) eklenebilir."
-    quizItems={quizItems} items={items} prefix="paracomp" doneCap="PARAGRAF TAMAM"
+  return <DeckRoom title={pick(lang, MODULE_INFO.paracomp.name, MODULE_INFO.paracomp.name_en)} sub={pick(lang, MODULE_INFO.paracomp.sub, MODULE_INFO.paracomp.sub_en)}
+    empty={t(lang, "pcm.empty")}
+    quizItems={quizItems} items={items} prefix="paracomp" doneCap={t(lang, "pcm.doneCap")}
     store={store} onBack={onBack} award={award}
-    hint={<div className="af-restate-hint"><AlignLeft size={13} /> ---- yerine, öncesi ve sonrasıyla uyumlu cümleyi seç.</div>} />;
+    hint={<div className="af-restate-hint"><AlignLeft size={13} /> {t(lang, "pcm.hint")}</div>} />;
 }
 
 /* ============================================================
    TRANSLATE  (best translation — YDS)
 ============================================================ */
 export function TranslateRoom({ level, store, award, onBack, exam, field }) {
+  const lang = useLang();
   const items = useMemo(() => {
-    let f = TRANSLATE.filter((t) => !level || lvIndex(t.lv) <= lvIndex(level));
+    let f = TRANSLATE.filter((x) => !level || lvIndex(x.lv) <= lvIndex(level));
     f = byField(f, exam, field);
     return f.length ? f : TRANSLATE;
   }, [level, exam, field]);
   const quizItems = useMemo(
-    () => items.map((t) => ({
+    () => items.map((x) => ({
       q: (
         <div className="af-translate">
-          <div className="af-tr-dir">{t.dir === "tr2en" ? "Türkçe → İngilizce" : "İngilizce → Türkçe"}</div>
-          <div className="af-tr-source">{t.source}</div>
+          <div className="af-tr-dir">{x.dir === "tr2en" ? t(lang, "tl.tr2en") : t(lang, "tl.en2tr")}</div>
+          <div className="af-tr-source">{x.source}</div>
         </div>
       ),
-      opts: t.opts, ans: t.ans, tr: t.tr,
+      opts: x.opts, ans: x.ans, tr: x.tr, en: x.en,
     })),
-    [items]
+    [items, lang]
   );
-  return <DeckRoom title="Çeviri" sub="YDS · translation"
-    empty="Henüz cümle yok — içerik kaynağından (content.json) eklenebilir."
-    quizItems={quizItems} items={items} prefix="translate" doneCap="ÇEVİRİ TAMAM"
+  return <DeckRoom title={pick(lang, MODULE_INFO.translate.name, MODULE_INFO.translate.name_en)} sub={pick(lang, MODULE_INFO.translate.sub, MODULE_INFO.translate.sub_en)}
+    empty={t(lang, "tl.empty")}
+    quizItems={quizItems} items={items} prefix="translate" doneCap={t(lang, "tl.doneCap")}
     store={store} onBack={onBack} award={award}
-    hint={<div className="af-restate-hint"><LanguagesIcon size={13} /> Anlamı en doğru veren çeviriyi seç.</div>} />;
+    hint={<div className="af-restate-hint"><LanguagesIcon size={13} /> {t(lang, "tl.hint")}</div>} />;
 }
 
 
@@ -2140,31 +2170,32 @@ function extractScore(txt, scale = 30) {
 }
 
 export function ToeflIntegratedRoom({ level, store, award, onBack }) {
+  const lang = useLang();
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
-    const f = TOEFL_INTEGRATED.filter((t) => !level || lvIndex(t.lv) <= lvIndex(level));
+    const f = TOEFL_INTEGRATED.filter((x) => !level || lvIndex(x.lv) <= lvIndex(level));
     return f.length ? f : TOEFL_INTEGRATED;
   }, [level]);
   if (open) return <ToeflIntegratedItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
-      <ModuleBar title="TOEFL Integrated" sub="oku → dinle → yaz/konuş" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.toeflint.name, MODULE_INFO.toeflint.name_en)} sub={pick(lang, MODULE_INFO.toeflint.sub, MODULE_INFO.toeflint.sub_en)} onBack={onBack} />
       <div className="af-substage">
         {TOEFL_INTEGRATED.length === 0 ? (
-          <div className="af-empty"><AlertTriangle size={14} /> Henüz görev yok — içerik kaynağından (content.json) eklenebilir.</div>
+          <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "ti.empty")}</div>
         ) : null}
         <div className="af-grid">
-          {items.map((t) => {
-            const done = !!store.state.done["toeflint:" + t.id];
+          {items.map((x) => {
+            const done = !!store.state.done["toeflint:" + x.id];
             return (
-              <button key={t.id} className="af-card" onClick={() => setOpen(t)}>
+              <button key={x.id} className="af-card" onClick={() => setOpen(x)}>
                 <div className="af-card-top">
                   <span className="af-card-icon af-ic-toeflint"><Layers size={20} /></span>
-                  <span className="af-card-tag">{t.lv}</span>
+                  <span className="af-card-tag">{x.lv}</span>
                 </div>
-                <div className="af-card-name">{t.reading.title}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
-                <div className="af-card-desc">{t.type === "speaking" ? "Konuşma" : "Yazma"} · {t.topic}</div>
-                <div className="af-card-go">BAŞLA <ArrowRight size={15} /></div>
+                <div className="af-card-name">{x.reading.title}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
+                <div className="af-card-desc">{x.type === "speaking" ? t(lang, "ti.speaking") : t(lang, "ti.writing")} · {x.topic}</div>
+                <div className="af-card-go">{t(lang, "common.start")} <ArrowRight size={15} /></div>
               </button>
             );
           })}
@@ -2175,6 +2206,7 @@ export function ToeflIntegratedRoom({ level, store, award, onBack }) {
 }
 
 function ToeflIntegratedItem({ item, store, award, onBack }) {
+  const lang = useLang();
   const isSpeaking = item.type === "speaking";
   const [phase, setPhase] = useState("read");      // read -> listen -> respond -> done
   const [spk, setSpk] = useState("idle");          // speaking sub-stage: idle -> prep -> speak -> transcript
@@ -2213,7 +2245,7 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
   async function evaluate() {
     if (evaluating) return;
     const answer = text.trim();
-    if (answer.split(/\s+/).filter(Boolean).length < 5) { setErr("Değerlendirme için biraz daha yaz."); return; }
+    if (answer.split(/\s+/).filter(Boolean).length < 5) { setErr(t(lang, "ti.needMore")); return; }
     setEvaluating(true); setErr(null);
     const aiItem = {
       type: isSpeaking ? "TOEFL Integrated Speaking" : "TOEFL Integrated Writing",
@@ -2223,19 +2255,21 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
         "\n\n[READING PASSAGE]\n" + item.reading.body +
         "\n\n[LECTURE TRANSCRIPT]\n" + item.lecture.body +
         "\n\n[Dersin okuma pasajına karşı çıktığı noktalar]\n- " + item.keyPoints.join("\n- ") +
-        "\n\nDeğerlendirme: yanıt dersin üç noktasını kapsıyor mu; bunları okuma pasajındaki ilgili iddialarla doğru biçimde ilişkilendiriyor mu; organizasyon ve dil nasıl? Yanıtının EN BAŞINA 'Puan: X/30' biçiminde bir puan yaz, ardından 2–3 satır Türkçe geri bildirim ver.",
+        (lang === "en"
+          ? "\n\nEvaluation: does the response cover the lecture's three points; does it correctly relate them to the relevant claims in the reading; how are organisation and language? Write a score in the form 'Puan: X/30' at the VERY START of your reply, then give 2–3 lines of feedback in ENGLISH."
+          : "\n\nDeğerlendirme: yanıt dersin üç noktasını kapsıyor mu; bunları okuma pasajındaki ilgili iddialarla doğru biçimde ilişkilendiriyor mu; organizasyon ve dil nasıl? Yanıtının EN BAŞINA 'Puan: X/30' biçiminde bir puan yaz, ardından 2–3 satır Türkçe geri bildirim ver."),
     };
     try {
       let raw, score, offline = false;
       if (apiKey) {
-        raw = await scoreWithAI({ text: answer, item: aiItem, apiKey });
+        raw = await scoreWithAI({ text: answer, item: aiItem, apiKey, lang });
         score = extractScore(raw);
       } else {
         offline = true;
-        const a = analyzeWriting(answer, { minWords: item.minWords || 150 });
+        const a = analyzeWriting(answer, { minWords: item.minWords || 150 }, lang);
         score = Math.max(0, Math.min(30, Math.round((parseFloat(a.band) / 8) * 30)));
-        raw = "Çevrimdışı yaklaşık değerlendirme (resmî değil):\n• " + a.notes.join("\n• ") +
-          "\n\nGerçek AI puanı için Ayarlar'dan Anthropic API anahtarı ekle.";
+        raw = t(lang, "ti.offlineFeedback") + "\n• " + a.notes.join("\n• ") +
+          "\n\n" + t(lang, "ti.addKey");
       }
       setResult({ score, raw, offline });
       store.markDone("toeflint:" + item.id);
@@ -2243,13 +2277,13 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
       award(score && score > 0 ? Math.round(score) : 12, true);
       setPhase("done");
     } catch (e) {
-      setErr(e.message || "Değerlendirme başarısız oldu.");
+      setErr(e.message || t(lang, "ti.evalFail"));
     } finally { setEvaluating(false); }
   }
 
   const readingParas = item.reading.body.split(/\n\s*\n/);
   const lectureParas = item.lecture.body.split(/\n\s*\n/);
-  const stageSub = phase === "read" ? "1/3 Okuma" : phase === "listen" ? "2/3 Dinleme" : phase === "respond" ? "3/3 Yanıt" : "Sonuç";
+  const stageSub = phase === "read" ? t(lang, "ti.stage1") : phase === "listen" ? t(lang, "ti.stage2") : phase === "respond" ? t(lang, "ti.stage3") : t(lang, "ti.stageDone");
 
   return (
     <>
@@ -2259,87 +2293,87 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
         {phase === "read" ? (
           <>
             <div className="af-ti-bar">
-              <span className="af-ti-step"><BookOpen size={14} /> Okuma — pasajı oku</span>
+              <span className="af-ti-step"><BookOpen size={14} /> {t(lang, "ti.readStep")}</span>
               <span className={"af-ti-clock" + (readLeft === 0 ? " is-up" : "")}><Timer size={14} /> {mmss(readLeft)}</span>
             </div>
             <div className="af-article">
               {readingParas.map((p, i) => <p key={i} className="af-article-p">{p}</p>)}
             </div>
             <button className="af-q-next" onClick={() => { stopSpeak(); setPhase("listen"); }}>
-              Dinlemeye geç <ArrowRight size={15} />
+              {t(lang, "ti.toListening")} <ArrowRight size={15} />
             </button>
           </>
         ) : phase === "listen" ? (
           <>
             <div className="af-ti-bar">
-              <span className="af-ti-step"><Headphones size={14} /> Dinleme — ders pasaja karşı çıkıyor</span>
+              <span className="af-ti-step"><Headphones size={14} /> {t(lang, "ti.listenStep")}</span>
             </div>
-            <div className="af-ti-note"><Lightbulb size={13} /> Pasaj artık gizli. Dersi dinle ve aşağıya not al — yanıtında dersin noktalarını kullanacaksın.</div>
+            <div className="af-ti-note"><Lightbulb size={13} /> {t(lang, "ti.hiddenNote")}</div>
             <div className="af-play">
               <div className="af-play-row">
                 <button className="af-play-btn" onClick={playLecture}>{playing ? <Pause size={22} /> : <Play size={22} />}</button>
                 <div className="af-play-info">
-                  <div className="af-play-title"><Volume2 size={14} /> {playing ? "oynatılıyor…" : "Dinle"}</div>
-                  <div className="af-play-sub">istediğin kadar tekrar dinleyebilirsin</div>
+                  <div className="af-play-title"><Volume2 size={14} /> {playing ? t(lang, "li.playing") : t(lang, "ti.play")}</div>
+                  <div className="af-play-sub">{t(lang, "li.replay")}</div>
                 </div>
               </div>
               {(!soundOn || !speechSupported()) ? (
                 <button className="af-transcript-toggle" onClick={() => setShowLec((v) => !v)}>
-                  {showLec ? <><EyeOff size={13} /> ders metnini gizle</> : <><Eye size={13} /> ders metnini göster (ses kapalı)</>}
+                  {showLec ? <><EyeOff size={13} /> {t(lang, "ti.lecHide")}</> : <><Eye size={13} /> {t(lang, "ti.lecShow")}</>}
                 </button>
               ) : null}
               {showLec ? <div className="af-ti-lecture">{lectureParas.map((p, i) => <p key={i} className="af-article-p">{p}</p>)}</div> : null}
             </div>
             <textarea className="af-notes" value={notes} onChange={(e) => setNotes(e.target.value)}
-              placeholder="Not defteri — dersin üç karşı-noktasını yakala (kaydedilmez)" />
-            <button className="af-q-next af-listen-go" onClick={goRespond}>Yanıta geç <ArrowRight size={15} /></button>
+              placeholder={t(lang, "ti.notesPh")} />
+            <button className="af-q-next af-listen-go" onClick={goRespond}>{t(lang, "ti.toResponse")} <ArrowRight size={15} /></button>
           </>
         ) : phase === "respond" ? (
           <>
             <div className="af-ti-bar">
-              <span className="af-ti-step"><PenLine size={14} /> Yanıt</span>
+              <span className="af-ti-step"><PenLine size={14} /> {t(lang, "ti.respStep")}</span>
               {!isSpeaking ? <span className={"af-ti-clock" + (writeLeft === 0 ? " is-up" : "")}><Timer size={14} /> {mmss(writeLeft)}</span> : null}
             </div>
-            <div className="af-write-prompt"><span className="af-write-cap">GÖREV</span> {item.prompt}</div>
+            <div className="af-write-prompt"><span className="af-write-cap">{t(lang, "wr.task")}</span> {item.prompt}</div>
 
             {!isSpeaking ? (
               <>
                 <div className="af-ti-readback">
-                  <div className="af-ti-readback-cap"><BookOpen size={13} /> Okuma pasajı (yazarken görünür)</div>
+                  <div className="af-ti-readback-cap"><BookOpen size={13} /> {t(lang, "ti.readback")}</div>
                   {readingParas.map((p, i) => <p key={i} className="af-ti-readback-p">{p}</p>)}
                 </div>
-                {writeLeft === 0 ? <div className="af-ti-note"><Timer size={13} /> Süre doldu — yine de yazmayı bitirip değerlendirebilirsin (yumuşak süre).</div> : null}
+                {writeLeft === 0 ? <div className="af-ti-note"><Timer size={13} /> {t(lang, "ti.timeUp")}</div> : null}
                 <textarea className="af-write-area" value={text} onChange={(e) => setText(e.target.value)}
-                  placeholder="Dersin noktalarını özetle ve her birinin okumadaki ilgili iddiayı nasıl çürüttüğünü açıkla…" />
+                  placeholder={t(lang, "ti.writePh")} />
                 <div className="af-write-meta">
-                  <span className={words >= (item.minWords || 150) ? "is-ok" : ""}>{words} / {item.minWords || 150} kelime</span>
+                  <span className={words >= (item.minWords || 150) ? "is-ok" : ""}>{t(lang, "wr.wordCount", { w: words, n: item.minWords || 150 })}</span>
                 </div>
               </>
             ) : (
               <>
                 {spk === "idle" ? (
                   <div className="af-ti-speak">
-                    <p className="af-ti-note"><Mic size={13} /> Hazırlık {item.prep || 20} sn, ardından {item.respond || 60} sn konuşma. Yüksek sesle yanıtla; ses kaydı tutulmaz.</p>
-                    <button className="af-q-next" onClick={() => setSpk("prep")}>Hazırlığı başlat <ArrowRight size={15} /></button>
+                    <p className="af-ti-note"><Mic size={13} /> {t(lang, "ti.speakIntro", { p: item.prep || 20, r: item.respond || 60 })}</p>
+                    <button className="af-q-next" onClick={() => setSpk("prep")}>{t(lang, "ti.startPrep")} <ArrowRight size={15} /></button>
                   </div>
                 ) : spk === "prep" ? (
                   <div className="af-ti-speak is-prep">
-                    <div className="af-ti-bigclock"><Timer size={18} /> Hazırlık {mmss(prepLeft)}</div>
-                    <p className="af-ti-note">Notlarına bak, yanıtını planla. Süre dolunca konuşma otomatik başlar.</p>
-                    <button className="af-transcript-toggle" onClick={() => setSpk("speak")}>hemen konuşmaya geç</button>
+                    <div className="af-ti-bigclock"><Timer size={18} /> {t(lang, "ti.prepLabel", { t: mmss(prepLeft) })}</div>
+                    <p className="af-ti-note">{t(lang, "ti.prepNote")}</p>
+                    <button className="af-transcript-toggle" onClick={() => setSpk("speak")}>{t(lang, "ti.toSpeakNow")}</button>
                   </div>
                 ) : spk === "speak" ? (
                   <div className="af-ti-speak is-live">
-                    <div className="af-ti-bigclock is-live"><Mic size={18} /> Konuş! {mmss(speakLeft)}</div>
-                    <p className="af-ti-note">Yüksek sesle yanıtla — adamın görüşünü ve iki gerekçesini özetle.</p>
-                    <button className="af-transcript-toggle" onClick={() => setSpk("transcript")}>konuşmayı bitir</button>
+                    <div className="af-ti-bigclock is-live"><Mic size={18} /> {t(lang, "ti.speakNow", { t: mmss(speakLeft) })}</div>
+                    <p className="af-ti-note">{t(lang, "ti.speakNote")}</p>
+                    <button className="af-transcript-toggle" onClick={() => setSpk("transcript")}>{t(lang, "ti.endSpeak")}</button>
                   </div>
                 ) : (
                   <>
-                    <p className="af-ti-note"><PenLine size={13} /> Ne söylediğini kısaca buraya yaz — AI bu transkripti puanlayacak (ses kaydı yok).</p>
+                    <p className="af-ti-note"><PenLine size={13} /> {t(lang, "ti.transcriptNote")}</p>
                     <textarea className="af-write-area" value={text} onChange={(e) => setText(e.target.value)}
-                      placeholder="Söylediklerinin kısa bir özetini yaz…" />
-                    <div className="af-write-meta"><span className={words >= 40 ? "is-ok" : ""}>{words} kelime</span></div>
+                      placeholder={t(lang, "ti.transcriptPh")} />
+                    <div className="af-write-meta"><span className={words >= 40 ? "is-ok" : ""}>{t(lang, "common.words", { n: words })}</span></div>
                   </>
                 )}
               </>
@@ -2348,20 +2382,20 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
             {(!isSpeaking || spk === "transcript") ? (
               <div className="af-score-row">
                 <button className="af-score-btn is-ai" disabled={evaluating || words < 5} onClick={evaluate}>
-                  <Sparkles size={15} /> {evaluating ? "değerlendiriliyor…" : "Değerlendir"}
+                  <Sparkles size={15} /> {evaluating ? t(lang, "common.evaluating") : t(lang, "common.evaluate")}
                 </button>
-                <span className="af-ti-aimode">{apiKey ? "AI puanı (Anthropic)" : "çevrimdışı yaklaşık puan"}</span>
+                <span className="af-ti-aimode">{apiKey ? t(lang, "common.aiMode") : t(lang, "common.offlineMode")}</span>
               </div>
             ) : null}
             {err ? <div className="af-ai-err"><AlertTriangle size={14} /> {err}</div> : null}
           </>
         ) : (
           <div className="af-result">
-            <div className="af-result-cap">{isSpeaking ? "KONUŞMA" : "YAZMA"} · TOEFL INTEGRATED</div>
+            <div className="af-result-cap">{(isSpeaking ? t(lang, "ti.speaking") : t(lang, "ti.writing")).toUpperCase()} · TOEFL INTEGRATED</div>
             <div className="af-result-lv">{result && result.score != null ? result.score + "/30" : "—"}</div>
-            {result && result.offline ? <div className="af-band-cap">çevrimdışı yaklaşık · resmî değil</div> : <div className="af-band-cap">AI değerlendirmesi · yaklaşıktır</div>}
+            {result && result.offline ? <div className="af-band-cap">{t(lang, "ti.offlineCap")}</div> : <div className="af-band-cap">{t(lang, "ti.aiCap")}</div>}
             <div className="af-ai-out af-ti-feedback">{result ? result.raw : ""}</div>
-            <button className="af-q-next af-result-go" onClick={onBack}>Diğer görevler <ArrowRight size={16} /></button>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ti.others")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -2375,44 +2409,45 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
    Pulls from the existing MCQ pools; reuses af-mcq rendering.
 ============================================================ */
 const lvOk = (lv, level) => !level || lvIndex(lv) <= lvIndex(level);
-function buildMockPool(level) {
+function buildMockPool(level, lang) {
   const pool = [];
   CLOZE.filter((c) => lvOk(c.lv, level)).forEach((c) => {
     c.blanks.forEach((b) => pool.push({
-      type: "Boşluk Doldurma", opts: b.opts, ans: b.ans, tr: b.tr,
-      q: (<div className="af-mock-q"><p className="af-mock-passage">{c.text}</p><p className="af-mock-ask">({b.n}) numaralı boşluğa hangi seçenek gelmeli?</p></div>),
+      type: "Boşluk Doldurma", opts: b.opts, ans: b.ans, tr: b.tr, en: b.en,
+      q: (<div className="af-mock-q"><p className="af-mock-passage">{c.text}</p><p className="af-mock-ask">{t(lang, "cl.q", { n: b.n })}</p></div>),
     }));
   });
   RESTATE.filter((r) => lvOk(r.lv, level)).forEach((r) =>
-    pool.push({ type: "Anlamca En Yakın Cümle", q: r.stem, opts: r.opts, ans: r.ans, tr: r.tr }));
+    pool.push({ type: "Anlamca En Yakın Cümle", q: r.stem, opts: r.opts, ans: r.ans, tr: r.tr, en: r.en }));
   ODDOUT.filter((o) => lvOk(o.lv, level)).forEach((o) =>
     pool.push({
-      type: "Akışı Bozan Cümle", opts: o.sentences.map((_, i) => ROMAN[i] + ". cümle"), ans: o.ans, tr: o.tr,
+      type: "Akışı Bozan Cümle", opts: o.sentences.map((_, i) => t(lang, "oo.sentence", { r: ROMAN[i] })), ans: o.ans, tr: o.tr, en: o.en,
       q: (<div className="af-oddout">{o.sentences.map((s, i) => <p key={i} className="af-oddout-s"><span className="af-oddout-n">{ROMAN[i]}</span>{s}</p>)}</div>),
     }));
   DIALOGUE.filter((d) => lvOk(d.lv, level)).forEach((d) =>
     pool.push({
-      type: "Diyalog Tamamlama", opts: d.opts, ans: d.ans, tr: d.tr,
+      type: "Diyalog Tamamlama", opts: d.opts, ans: d.ans, tr: d.tr, en: d.en,
       q: (<div className="af-dialogue">{d.lines.map((ln, i) => <p key={i} className={"af-dlg-line" + (i === d.blankIndex ? " is-blank" : "")}><span className="af-dlg-sp">{ln.sp}:</span><span className="af-dlg-t">{i === d.blankIndex ? "____" : ln.t}</span></p>)}</div>),
     }));
   PARACOMP.filter((p) => lvOk(p.lv, level)).forEach((p) => {
     const parts = p.text.split("----");
     pool.push({
-      type: "Paragraf Tamamlama", opts: p.opts, ans: p.ans, tr: p.tr,
+      type: "Paragraf Tamamlama", opts: p.opts, ans: p.ans, tr: p.tr, en: p.en,
       q: (<p className="af-paracomp-p">{parts.flatMap((seg, i) => i === 0 ? [<span key={"s" + i}>{seg}</span>] : [<span key={"g" + i} className="af-paracomp-gap"> ____ </span>, <span key={"s" + i}>{seg}</span>])}</p>),
     });
   });
-  TRANSLATE.filter((t) => lvOk(t.lv, level)).forEach((t) =>
+  TRANSLATE.filter((x) => lvOk(x.lv, level)).forEach((x) =>
     pool.push({
-      type: "Çeviri", opts: t.opts, ans: t.ans, tr: t.tr,
-      q: (<div className="af-translate"><div className="af-tr-dir">{t.dir === "tr2en" ? "Türkçe → İngilizce" : "İngilizce → Türkçe"}</div><div className="af-tr-source">{t.source}</div></div>),
+      type: "Çeviri", opts: x.opts, ans: x.ans, tr: x.tr, en: x.en,
+      q: (<div className="af-translate"><div className="af-tr-dir">{x.dir === "tr2en" ? t(lang, "tl.tr2en") : t(lang, "tl.en2tr")}</div><div className="af-tr-source">{x.source}</div></div>),
     }));
   GRAMMAR.filter((g) => lvOk(g.lv, level)).forEach((g) =>
-    g.items.forEach((it) => pool.push({ type: "Gramer", q: it.q, opts: it.opts, ans: it.ans, tr: it.tr })));
+    g.items.forEach((it) => pool.push({ type: "Gramer", q: it.q, opts: it.opts, ans: it.ans, tr: it.tr, en: it.en })));
   return pool;
 }
 
 export function MockRoom({ level, store, onBack }) {
+  const lang = useLang();
   const [stage, setStage] = useState("setup");   // setup -> run -> done
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState([]);
@@ -2425,7 +2460,7 @@ export function MockRoom({ level, store, onBack }) {
   const sessionId = useRef("m_" + Date.now());
   const left = useTimer(totalSec, stage === "run");
 
-  const poolSize = useMemo(() => buildMockPool(level).length, [level]);
+  const poolSize = useMemo(() => buildMockPool(level, lang).length, [level, lang]);
   const options = [10, 20, 30].filter((n) => n <= poolSize);
   if (!options.length && poolSize > 0) options.push(poolSize);
 
@@ -2437,7 +2472,7 @@ export function MockRoom({ level, store, onBack }) {
   }
 
   function start(n) {
-    const pool = shuffle(buildMockPool(level)).slice(0, n);
+    const pool = shuffle(buildMockPool(level, lang)).slice(0, n);
     if (!pool.length) return;
     finishedRef.current = false;
     setQuestions(pool);
@@ -2482,20 +2517,20 @@ export function MockRoom({ level, store, onBack }) {
     return (
       <div className="af-mock af-mock-setup">
         <div className="af-mock-card">
-          <div className="af-mock-cap"><ClipboardList size={16} /> DENEME SINAVI</div>
-          <h2 className="af-mock-title">Tam ekran, süreli karışık test</h2>
-          <p className="af-mock-lede">Seviyene uygun (≤ {level}) sorulardan rastgele karışık bir test. Boşluk doldurma, anlamca en yakın cümle, akışı bozan cümle, diyalog, paragraf tamamlama, çeviri ve gramer karışır. Sırasında doğru/yanlış gösterilmez — sonunda topluca değerlendirilir.</p>
+          <div className="af-mock-cap"><ClipboardList size={16} /> {t(lang, "mk.cap")}</div>
+          <h2 className="af-mock-title">{t(lang, "mk.title")}</h2>
+          <p className="af-mock-lede">{t(lang, "mk.lede", { lv: level })}</p>
           <div className="af-mock-pick">
-            <span className="af-mock-pick-cap">Soru sayısı (≈75 sn/soru)</span>
+            <span className="af-mock-pick-cap">{t(lang, "mk.pickCap")}</span>
             <div className="af-mock-pickrow">
               {options.length ? options.map((n) => (
                 <button key={n} className="af-mock-pickbtn" onClick={() => start(n)}>
-                  {n} soru · {Math.round(n * 75 / 60)} dk
+                  {t(lang, "mk.pickBtn", { n, m: Math.round(n * 75 / 60) })}
                 </button>
-              )) : <span className="af-empty"><AlertTriangle size={14} /> Bu seviyede yeterli soru havuzu yok.</span>}
+              )) : <span className="af-empty"><AlertTriangle size={14} /> {t(lang, "mk.noPool")}</span>}
             </div>
           </div>
-          <button className="af-mock-exit" onClick={onBack}>Vazgeç</button>
+          <button className="af-mock-exit" onClick={onBack}>{t(lang, "common.cancel")}</button>
         </div>
       </div>
     );
@@ -2514,7 +2549,7 @@ export function MockRoom({ level, store, onBack }) {
           <button className="af-mock-quit" onClick={quit} title="çıkış"><X size={16} /></button>
         </div>
         <div className="af-mock-stage">
-          <div className="af-mock-type">{q.type}</div>
+          <div className="af-mock-type">{qtypeLabel(lang, q.type)}</div>
           <div className="af-q-text">{q.q}</div>
           <div className="af-mcq-opts">
             {q.opts.map((o, idx) => (
@@ -2524,9 +2559,9 @@ export function MockRoom({ level, store, onBack }) {
             ))}
           </div>
           <button className="af-q-next af-mock-next" disabled={sel == null} onClick={next}>
-            {last ? <>Bitir <Check size={15} /></> : <>Sonraki <ArrowRight size={15} /></>}
+            {last ? <>{t(lang, "common.finish")} <Check size={15} /></> : <>{t(lang, "common.next")} <ArrowRight size={15} /></>}
           </button>
-          {left === 0 ? <div className="af-ti-note"><Timer size={13} /> Süre doldu — sınav kapanıyor…</div> : null}
+          {left === 0 ? <div className="af-ti-note"><Timer size={13} /> {t(lang, "mk.timeUp")}</div> : null}
         </div>
       </div>
     );
@@ -2544,40 +2579,40 @@ export function MockRoom({ level, store, onBack }) {
   return (
     <div className="af-mock af-mock-done">
       <div className="af-result">
-        <div className="af-result-cap">DENEME TAMAM</div>
+        <div className="af-result-cap">{t(lang, "mk.doneCap")}</div>
         <div className="af-result-lv">{correct}/{questions.length}</div>
-        <div className="af-band-cap">%{pct} doğru · süre {mmss(elapsed)} / {mmss(totalSec)}</div>
+        <div className="af-band-cap">{t(lang, "mk.summary", { p: pct, e: mmss(elapsed), t: mmss(totalSec) })}</div>
       </div>
       <div className="af-mock-breakdown">
-        <div className="af-mock-bd-cap">Soru tipine göre</div>
-        {Object.entries(breakdown).map(([t, b]) => (
-          <div key={t} className="af-mock-bd-row">
-            <span className="af-mock-bd-type">{t}</span>
+        <div className="af-mock-bd-cap">{t(lang, "mk.byType")}</div>
+        {Object.entries(breakdown).map(([ty, b]) => (
+          <div key={ty} className="af-mock-bd-row">
+            <span className="af-mock-bd-type">{qtypeLabel(lang, ty)}</span>
             <span className="af-mock-bd-score">{b.c}/{b.t}</span>
             <span className="af-task-bar"><i style={{ width: (b.t ? (b.c / b.t) * 100 : 0) + "%" }} /></span>
           </div>
         ))}
       </div>
       <div className="af-mock-review">
-        <div className="af-mock-bd-cap">Gözden geçirme</div>
+        <div className="af-mock-bd-cap">{t(lang, "mk.review")}</div>
         {questions.map((q, idx) => {
           const ok = answers[idx] === q.ans;
           return (
             <div key={idx} className={"af-mock-rev " + (ok ? "is-ok" : "is-no")}>
               <div className="af-mock-rev-head">
                 <span className="af-mock-rev-n">{idx + 1}</span>
-                <span className="af-mock-rev-type">{q.type}</span>
+                <span className="af-mock-rev-type">{qtypeLabel(lang, q.type)}</span>
                 {ok ? <Check size={14} className="af-mock-rev-ic is-ok" /> : <X size={14} className="af-mock-rev-ic is-no" />}
               </div>
-              <div className="af-mock-rev-ans"><b>Doğru:</b> {q.opts[q.ans]}</div>
-              {!ok && answers[idx] != null ? <div className="af-mock-rev-yours">Senin: {q.opts[answers[idx]]}</div> : null}
-              {answers[idx] == null ? <div className="af-mock-rev-yours">boş bırakıldı</div> : null}
-              {q.tr ? <div className="af-q-exp"><Lightbulb size={13} /> {q.tr}</div> : null}
+              <div className="af-mock-rev-ans"><b>{t(lang, "mk.correctLabel")}</b> {q.opts[q.ans]}</div>
+              {!ok && answers[idx] != null ? <div className="af-mock-rev-yours">{t(lang, "mk.yours", { a: q.opts[answers[idx]] })}</div> : null}
+              {answers[idx] == null ? <div className="af-mock-rev-yours">{t(lang, "mk.blank")}</div> : null}
+              {exTr(lang, q) ? <div className="af-q-exp"><Lightbulb size={13} /> {exTr(lang, q)}</div> : null}
             </div>
           );
         })}
       </div>
-      <button className="af-q-next af-result-go" onClick={onBack}>Kataloğa dön <ArrowRight size={16} /></button>
+      <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
     </div>
   );
 }
@@ -2587,6 +2622,7 @@ export function MockRoom({ level, store, onBack }) {
    AI-scored (scoreWithAI) / offline (analyzeWriting). 0–10.
 ============================================================ */
 export function ParaphraseRoom({ level, store, award, onBack }) {
+  const lang = useLang();
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
     const f = PARAPHRASE.filter((p) => !level || lvIndex(p.lv) <= lvIndex(level));
@@ -2595,10 +2631,10 @@ export function ParaphraseRoom({ level, store, award, onBack }) {
   if (open) return <ParaphraseItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
-      <ModuleBar title="Yeniden Yazım" sub="C1 cümleyi yapısını değiştirerek kur" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.paraphrase.name, MODULE_INFO.paraphrase.name_en)} sub={pick(lang, MODULE_INFO.paraphrase.sub, MODULE_INFO.paraphrase.sub_en)} onBack={onBack} />
       <div className="af-substage">
         {PARAPHRASE.length === 0 ? (
-          <div className="af-empty"><AlertTriangle size={14} /> Henüz cümle yok — içerik kaynağından (content.json) eklenebilir.</div>
+          <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "pr.empty")}</div>
         ) : null}
         <div className="af-grid">
           {items.map((p) => {
@@ -2609,9 +2645,9 @@ export function ParaphraseRoom({ level, store, award, onBack }) {
                   <span className="af-card-icon af-ic-paraphrase"><RefreshCw size={20} /></span>
                   <span className="af-card-tag">{p.lv}</span>
                 </div>
-                <div className="af-card-name">{p.instruction}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
+                <div className="af-card-name">{pick(lang, p.instruction, p.instruction_en)}{done ? <Check size={14} className="af-done-badge" /> : null}</div>
                 <div className="af-card-desc">{p.source.slice(0, 56)}{p.source.length > 56 ? "…" : ""}</div>
-                <div className="af-card-go">YAZ <ArrowRight size={15} /></div>
+                <div className="af-card-go">{t(lang, "common.write")} <ArrowRight size={15} /></div>
               </button>
             );
           })}
@@ -2621,6 +2657,7 @@ export function ParaphraseRoom({ level, store, award, onBack }) {
   );
 }
 function ParaphraseItem({ item, store, award, onBack }) {
+  const lang = useLang();
   const [text, setText] = useState("");
   const [evaluating, setEvaluating] = useState(false);
   const [err, setErr] = useState(null);
@@ -2631,64 +2668,65 @@ function ParaphraseItem({ item, store, award, onBack }) {
   async function evaluate() {
     if (evaluating) return;
     const answer = text.trim();
-    if (answer.split(/\s+/).filter(Boolean).length < 3) { setErr("Değerlendirme için cümleni yaz."); return; }
+    if (answer.split(/\s+/).filter(Boolean).length < 3) { setErr(t(lang, "pr.needMore")); return; }
     setEvaluating(true); setErr(null);
     const aiItem = {
-      type: "Paraphrase / Yeniden Yazım", exam: ["TOEFL"],
+      type: "Paraphrase", exam: ["TOEFL"],
       prompt:
-        "KAYNAK CÜMLE:\n" + item.source +
-        "\n\nİSTENEN DÖNÜŞÜM:\n" + item.instruction +
-        "\n\nÖğrencinin yeniden yazımını şu üç ölçüte göre değerlendir: (a) anlamı koruyor mu, (b) istenen yapısal dönüşümü doğru yaptı mı, (c) dilbilgisel olarak doğru mu. " +
-        "Yanıtının EN BAŞINA 'Puan: X/10' yaz, ardından 2–3 satır Türkçe geri bildirim ver ve son satırda 'Örnek: ' ile doğru bir yeniden yazım öner.",
+        "SOURCE SENTENCE:\n" + item.source +
+        "\n\nREQUIRED TRANSFORMATION:\n" + pick(lang, item.instruction, item.instruction_en) +
+        (lang === "en"
+          ? "\n\nEvaluate the student's rewrite on three criteria: (a) does it preserve the meaning, (b) did it perform the required structural transformation, (c) is it grammatically correct. Write 'Puan: X/10' at the VERY START, then 2–3 lines of feedback in ENGLISH, and on the last line suggest a correct rewrite after 'Sample: '."
+          : "\n\nÖğrencinin yeniden yazımını şu üç ölçüte göre değerlendir: (a) anlamı koruyor mu, (b) istenen yapısal dönüşümü doğru yaptı mı, (c) dilbilgisel olarak doğru mu. Yanıtının EN BAŞINA 'Puan: X/10' yaz, ardından 2–3 satır Türkçe geri bildirim ver ve son satırda 'Örnek: ' ile doğru bir yeniden yazım öner."),
     };
     try {
       let raw, score, offline = false;
       if (apiKey) {
-        raw = await scoreWithAI({ text: answer, item: aiItem, apiKey });
+        raw = await scoreWithAI({ text: answer, item: aiItem, apiKey, lang });
         score = extractScore(raw, 10);
       } else {
         offline = true;
-        const a = analyzeWriting(answer, { minWords: 0 });
+        const a = analyzeWriting(answer, { minWords: 0 }, lang);
         score = Math.max(0, Math.min(10, Math.round((parseFloat(a.band) / 8) * 10)));
-        raw = "Çevrimdışı yaklaşık değerlendirme (resmî değil):\n• " + a.notes.join("\n• ") +
-          "\n\nAI değerlendirmesi için Ayarlar'dan Anthropic API anahtarı ekle.";
+        raw = t(lang, "ti.offlineFeedback") + "\n• " + a.notes.join("\n• ") +
+          "\n\n" + t(lang, "ti.addKey");
       }
       setResult({ score, raw, offline });
       store.markDone("paraphrase:" + item.id);
       store.touchStreak();
       award(score && score > 0 ? Math.round(score) : 5, true);
     } catch (e) {
-      setErr(e.message || "Değerlendirme başarısız oldu.");
+      setErr(e.message || t(lang, "ti.evalFail"));
     } finally { setEvaluating(false); }
   }
 
   return (
     <>
-      <ModuleBar title="Yeniden Yazım" sub={"Paraphrase · " + item.lv} onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.paraphrase.name, MODULE_INFO.paraphrase.name_en)} sub={t(lang, "pr.sub", { lv: item.lv })} onBack={onBack} />
       <div className="af-substage af-write">
-        <div className="af-write-prompt"><span className="af-write-cap">KAYNAK</span> {item.source}</div>
-        <div className="af-write-struct"><span className="af-write-cap">YÖNERGE</span> {item.instruction}</div>
+        <div className="af-write-prompt"><span className="af-write-cap">{t(lang, "pr.source")}</span> {item.source}</div>
+        <div className="af-write-struct"><span className="af-write-cap">{t(lang, "pr.instruction")}</span> {pick(lang, item.instruction, item.instruction_en)}</div>
         {!result ? (
           <>
             <textarea className="af-write-area" value={text} onChange={(e) => setText(e.target.value)}
-              placeholder="Cümleyi, istenen yapıyı kullanarak yeniden yaz…" />
-            <div className="af-write-meta"><span>{words} kelime</span></div>
+              placeholder={t(lang, "pr.ph")} />
+            <div className="af-write-meta"><span>{t(lang, "common.words", { n: words })}</span></div>
             <div className="af-score-row">
               <button className="af-score-btn is-ai" disabled={evaluating || words < 3} onClick={evaluate}>
-                <Sparkles size={15} /> {evaluating ? "değerlendiriliyor…" : "Değerlendir"}
+                <Sparkles size={15} /> {evaluating ? t(lang, "common.evaluating") : t(lang, "common.evaluate")}
               </button>
-              <span className="af-ti-aimode">{apiKey ? "AI puanı (Anthropic)" : "çevrimdışı yaklaşık puan"}</span>
+              <span className="af-ti-aimode">{apiKey ? t(lang, "common.aiMode") : t(lang, "common.offlineMode")}</span>
             </div>
             {err ? <div className="af-ai-err"><AlertTriangle size={14} /> {err}</div> : null}
           </>
         ) : (
           <div className="af-result">
-            <div className="af-result-cap">YENİDEN YAZIM</div>
+            <div className="af-result-cap">{t(lang, "pr.doneCap")}</div>
             <div className="af-result-lv">{result.score != null ? result.score + "/10" : "—"}</div>
-            <div className="af-band-cap">{result.offline ? "çevrimdışı yaklaşık · resmî değil" : "AI değerlendirmesi · yaklaşıktır"}</div>
+            <div className="af-band-cap">{result.offline ? t(lang, "ti.offlineCap") : t(lang, "ti.aiCap")}</div>
             <div className="af-ai-out af-ti-feedback">{result.raw}</div>
-            <div className="af-pp-sample"><span className="af-write-cap">ÖRNEK</span> {item.sample}</div>
-            <button className="af-q-next af-result-go" onClick={onBack}>Diğer cümleler <ArrowRight size={16} /></button>
+            <div className="af-pp-sample"><span className="af-write-cap">{t(lang, "pr.sample")}</span> {item.sample}</div>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "pr.others")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -2718,6 +2756,7 @@ function buildEH(item) {
   return { words, errorOf };
 }
 export function ErrorHuntRoom({ level, store, award, onBack }) {
+  const lang = useLang();
   const [open, setOpen] = useState(null);
   const items = useMemo(() => {
     const f = ERRORHUNT.filter((e) => !level || lvIndex(e.lv) <= lvIndex(level));
@@ -2726,10 +2765,10 @@ export function ErrorHuntRoom({ level, store, award, onBack }) {
   if (open) return <ErrorHuntItem item={open} store={store} award={award} onBack={() => setOpen(null)} />;
   return (
     <>
-      <ModuleBar title="Hata Avcısı" sub="paragraftaki gizli gramer hatalarını bul" onBack={onBack} />
+      <ModuleBar title={pick(lang, MODULE_INFO.errorhunt.name, MODULE_INFO.errorhunt.name_en)} sub={pick(lang, MODULE_INFO.errorhunt.sub, MODULE_INFO.errorhunt.sub_en)} onBack={onBack} />
       <div className="af-substage">
         {ERRORHUNT.length === 0 ? (
-          <div className="af-empty"><AlertTriangle size={14} /> Henüz paragraf yok — içerik kaynağından (content.json) eklenebilir.</div>
+          <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "eh.empty")}</div>
         ) : null}
         <div className="af-grid">
           {items.map((e) => {
@@ -2741,8 +2780,8 @@ export function ErrorHuntRoom({ level, store, award, onBack }) {
                   <span className="af-card-tag">{e.lv}</span>
                 </div>
                 <div className="af-card-name">{e.text.slice(0, 48)}…{done ? <Check size={14} className="af-done-badge" /> : null}</div>
-                <div className="af-card-desc">{e.errors.length} gizli hata</div>
-                <div className="af-card-go">BUL <ArrowRight size={15} /></div>
+                <div className="af-card-desc">{t(lang, "eh.nHidden", { n: e.errors.length })}</div>
+                <div className="af-card-go">{t(lang, "common.find")} <ArrowRight size={15} /></div>
               </button>
             );
           })}
@@ -2752,6 +2791,7 @@ export function ErrorHuntRoom({ level, store, award, onBack }) {
   );
 }
 function ErrorHuntItem({ item, store, award, onBack }) {
+  const lang = useLang();
   const { words, errorOf } = useMemo(() => buildEH(item), [item]);
   const [selected, setSelected] = useState([]);   // word indices clicked
   const [checked, setChecked] = useState(false);
@@ -2778,10 +2818,10 @@ function ErrorHuntItem({ item, store, award, onBack }) {
 
   return (
     <>
-      <ModuleBar title="Hata Avcısı" sub={"Hata Avcısı · " + item.lv} onBack={onBack}
+      <ModuleBar title={pick(lang, MODULE_INFO.errorhunt.name, MODULE_INFO.errorhunt.name_en)} sub={t(lang, "eh.sub", { lv: item.lv })} onBack={onBack}
         right={!checked ? <span className="af-modbar-count">{mmss(left)}</span> : null} />
       <div className="af-substage">
-        <div className="af-eh-note"><Scan size={13} /> Paragrafta <b>{item.errors.length}</b> gizli gramer hatası var. Hatalı olduğunu düşündüğün kelimelere tıkla, sonra “Kontrol et”e bas.</div>
+        <div className="af-eh-note"><Scan size={13} /> {t(lang, "eh.note", { n: item.errors.length })}</div>
         <p className="af-eh-text">
           {words.map((w, idx) => {
             let cls = "af-eh-w";
@@ -2796,19 +2836,19 @@ function ErrorHuntItem({ item, store, award, onBack }) {
         </p>
 
         {!checked ? (
-          <button className="af-q-next" onClick={check}>Kontrol et <Check size={15} /></button>
+          <button className="af-q-next" onClick={check}>{t(lang, "common.check")} <Check size={15} /></button>
         ) : (
           <div className="af-eh-result">
-            <div className="af-result-cap">{score}/{item.errors.length} HATA BULUNDU</div>
+            <div className="af-result-cap">{t(lang, "eh.foundCap", { s: score, n: item.errors.length })}</div>
             <div className="af-eh-explain">
               {item.errors.map((e, ei) => (
                 <div key={ei} className={"af-eh-exrow " + (found.has(ei) ? "is-ok" : "is-no")}>
                   {found.has(ei) ? <Check size={14} className="af-eh-exic is-ok" /> : <X size={14} className="af-eh-exic is-no" />}
-                  <span><b>{e.find}</b> → <b className="af-eh-fix">{e.fix}</b> · {e.tr}</span>
+                  <span><b>{e.find}</b> → <b className="af-eh-fix">{e.fix}</b> · {exTr(lang, e)}</span>
                 </div>
               ))}
             </div>
-            <button className="af-q-next af-result-go" onClick={onBack}>Diğer paragraflar <ArrowRight size={16} /></button>
+            <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "eh.others")} <ArrowRight size={16} /></button>
           </div>
         )}
       </div>
@@ -2820,6 +2860,7 @@ function ErrorHuntItem({ item, store, award, onBack }) {
    FOCUS MODE  (timed deep-work session; state lives in the root)
 ============================================================ */
 export function FocusBar({ remainingMs, distractions, durationMin, onEnd }) {
+  const lang = useLang();
   const done = remainingMs <= 0;
   const m = Math.max(0, Math.floor(remainingMs / 60000));
   const sec = Math.max(0, Math.floor((remainingMs % 60000) / 1000));
@@ -2827,14 +2868,14 @@ export function FocusBar({ remainingMs, distractions, durationMin, onEnd }) {
     <div className={"af-focusbar " + (done ? "is-done" : "")}>
       <span className="af-focus-ic"><Target size={16} /></span>
       {done ? (
-        <span className="af-focus-time">{durationMin} dk tamam — aferin! <Trophy size={14} /></span>
+        <span className="af-focus-time">{t(lang, "fb.done", { n: durationMin })} <Trophy size={14} /></span>
       ) : (
-        <span className="af-focus-time">{String(m).padStart(2, "0")}:{String(sec).padStart(2, "0")} <em>odak</em></span>
+        <span className="af-focus-time">{String(m).padStart(2, "0")}:{String(sec).padStart(2, "0")} <em>{t(lang, "fb.focus")}</em></span>
       )}
-      <span className={"af-focus-dist " + (distractions > 0 ? "is-warn" : "")} title="sekme / pencere değiştirme sayısı">
-        dikkat dağınıklığı: {distractions}
+      <span className={"af-focus-dist " + (distractions > 0 ? "is-warn" : "")} title={t(lang, "fb.distractTitle")}>
+        {t(lang, "fb.distract", { n: distractions })}
       </span>
-      <button className="af-focus-end" onClick={onEnd}>{done ? "kapat" : "bitir"}</button>
+      <button className="af-focus-end" onClick={onEnd}>{done ? t(lang, "fb.close") : t(lang, "fb.end")}</button>
     </div>
   );
 }

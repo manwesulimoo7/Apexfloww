@@ -34,7 +34,7 @@ function defaultState() {
     stats: {},              // questionType -> { c: correctCount, t: totalCount }  (Gelişim Raporu)
     focusMinutes: 0,        // cumulative completed focus-mode minutes
     daily: { date: null, vocab: 0, xp: 0, grammar: 0, listening: 0, writing: 0 },
-    settings: { sound: true, rate: 0.95, apiKey: "", theme: "dark", contentUrl: "" },
+    settings: { sound: true, rate: 0.95, apiKey: "", theme: "dark", contentUrl: "", lang: "tr" },
   };
 }
 
@@ -229,7 +229,8 @@ const STOP = new Set(
   "the a an and or but of to in on at for with is are was were be been being this that these those it its as by from have has had will would can could should about into than then so very more most much many".split(" ")
 );
 
-export function analyzeWriting(text, item) {
+export function analyzeWriting(text, item, lang = "tr") {
+  const en = lang === "en";
   const clean = (text || "").trim();
   const words = clean ? clean.split(/\s+/) : [];
   const wc = words.length;
@@ -263,28 +264,48 @@ export function analyzeWriting(text, item) {
   const band = score.toFixed(1);
 
   const notes = [];
-  if (minW && wc < minW) notes.push(`Hedef ${minW} kelime; şu an ${wc}. Yaklaşık ${minW - wc} kelime daha ekle — eksik uzunluk sınavda puan kırar.`);
-  if (pc <= 1 && wc > 80) notes.push("Metin tek paragraf görünüyor. Fikirleri ayrı paragraflara böl (giriş / gövde / sonuç).");
-  if (linkersUsed.length <= 2) notes.push("Bağlaç çeşitliliği düşük. however, moreover, on the other hand, for example gibi geçişler ekle.");
-  if (longSentences >= 2) notes.push("Çok uzun cümleler var (40+ kelime). Bazılarını böl; aşırı uzunluk netliği düşürür.");
-  if (repeats.length) notes.push("Sık tekrarlanan kelimeler: " + repeats.map((r) => r.w).join(", ") + ". Eşanlamlılarla çeşitlendir.");
-  if (avgLen && avgLen < 8) notes.push("Cümleler çok kısa/basit. Bazılarını bağlaçlarla birleştirip yapı çeşitliliği göster.");
-  if (!notes.length) notes.push("Temel ölçütler iyi görünüyor. Artık içerik derinliğine ve örnek kalitesine odaklan.");
+  if (minW && wc < minW) notes.push(en
+    ? `Target ${minW} words; currently ${wc}. Add about ${minW - wc} more — falling short loses marks in the exam.`
+    : `Hedef ${minW} kelime; şu an ${wc}. Yaklaşık ${minW - wc} kelime daha ekle — eksik uzunluk sınavda puan kırar.`);
+  if (pc <= 1 && wc > 80) notes.push(en
+    ? "The text looks like a single paragraph. Split ideas into separate paragraphs (intro / body / conclusion)."
+    : "Metin tek paragraf görünüyor. Fikirleri ayrı paragraflara böl (giriş / gövde / sonuç).");
+  if (linkersUsed.length <= 2) notes.push(en
+    ? "Low linker variety. Add transitions like however, moreover, on the other hand, for example."
+    : "Bağlaç çeşitliliği düşük. however, moreover, on the other hand, for example gibi geçişler ekle.");
+  if (longSentences >= 2) notes.push(en
+    ? "There are very long sentences (40+ words). Split some of them; excessive length hurts clarity."
+    : "Çok uzun cümleler var (40+ kelime). Bazılarını böl; aşırı uzunluk netliği düşürür.");
+  if (repeats.length) notes.push(en
+    ? "Frequently repeated words: " + repeats.map((r) => r.w).join(", ") + ". Vary them with synonyms."
+    : "Sık tekrarlanan kelimeler: " + repeats.map((r) => r.w).join(", ") + ". Eşanlamlılarla çeşitlendir.");
+  if (avgLen && avgLen < 8) notes.push(en
+    ? "Sentences are very short/simple. Combine some with linkers to show structural variety."
+    : "Cümleler çok kısa/basit. Bazılarını bağlaçlarla birleştirip yapı çeşitliliği göster.");
+  if (!notes.length) notes.push(en
+    ? "The basics look good. Now focus on depth of content and quality of examples."
+    : "Temel ölçütler iyi görünüyor. Artık içerik derinliğine ve örnek kalitesine odaklan.");
   return { wc, sc, pc, avgLen, longSentences, linkersUsed, repeats, band, notes, minW };
 }
 
 export const AI_MODEL = "claude-sonnet-4-6";
-export async function scoreWithAI({ text, item, apiKey, model = AI_MODEL }) {
+export async function scoreWithAI({ text, item, apiKey, model = AI_MODEL, lang = "tr" }) {
   const isToefl = item && item.exam && item.exam.includes("TOEFL");
   const exam = isToefl ? "TOEFL iBT" : (item && item.exam && item.exam.includes("IELTS") ? "IELTS Academic" : "akademik İngilizce (IELTS/TOEFL)");
   const scale = isToefl ? "0-30 (TOEFL Writing ölçeği)" : "0-9 (IELTS band)";
-  const sys =
-    "Sen deneyimli bir " + exam + " yazma değerlendiricisisin. Öğrencinin görevi nasıl karşıladığını değerlendir. " +
-    "Açıklamaları TÜRKÇE yaz; düzeltme örneklerinde İngilizce yanlış→doğru biçimini kullan. Kısa ve somut ol. " +
-    "Tam olarak şu başlıklarla yanıtla:\n" +
-    "1) Tahmini puan [" + scale + "] (tek satır gerekçe)\n" +
-    "2) Görev Karşılama\n3) Tutarlılık & Bağdaşıklık\n4) Sözcük Dağarcığı\n" +
-    "5) Dilbilgisi & Doğruluk\n6) Düzeltilecek 3 somut hata (yanlış → doğru)\n7) Sonraki sefer için 2 öneri";
+  const sys = lang === "en"
+    ? "You are an experienced " + exam + " writing examiner. Evaluate how well the student met the task. " +
+      "Write all feedback in ENGLISH; use English wrong→right pairs in correction examples. Be brief and concrete. " +
+      "Answer with exactly these headings:\n" +
+      "1) Estimated score [" + scale + "] (one-line rationale)\n" +
+      "2) Task Response\n3) Coherence & Cohesion\n4) Lexical Resource\n" +
+      "5) Grammar & Accuracy\n6) 3 concrete fixes (wrong → right)\n7) 2 suggestions for next time"
+    : "Sen deneyimli bir " + exam + " yazma değerlendiricisisin. Öğrencinin görevi nasıl karşıladığını değerlendir. " +
+      "Açıklamaları TÜRKÇE yaz; düzeltme örneklerinde İngilizce yanlış→doğru biçimini kullan. Kısa ve somut ol. " +
+      "Tam olarak şu başlıklarla yanıtla:\n" +
+      "1) Tahmini puan [" + scale + "] (tek satır gerekçe)\n" +
+      "2) Görev Karşılama\n3) Tutarlılık & Bağdaşıklık\n4) Sözcük Dağarcığı\n" +
+      "5) Dilbilgisi & Doğruluk\n6) Düzeltilecek 3 somut hata (yanlış → doğru)\n7) Sonraki sefer için 2 öneri";
   const user =
     "GÖREV TÜRÜ: " + (item ? item.type : "") + "\nSORU: " + (item ? item.prompt : "") +
     "\n\nÖĞRENCİ CEVABI:\n" + text;

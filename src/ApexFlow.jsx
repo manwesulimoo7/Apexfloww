@@ -6,6 +6,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Styles } from "./styles.jsx";
 import { useStore, loadExternalContent, CONTENT_URL } from "./lib.js";
+import { LangContext, t } from "./i18n.js";
 import {
   TopHUD, Catalog, Placement, VocabReview, WordListRoom, GrammarHub,
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
@@ -17,6 +18,7 @@ import {
 export default function ApexFlow() {
   const store = useStore();
   const { state } = store;
+  const lang = (state.settings && state.settings.lang) || "tr";
 
   const [view, setView] = useState("catalog");
   const [ctx, setCtx] = useState({});
@@ -36,11 +38,11 @@ export default function ApexFlow() {
     const url = state.settings.contentUrl || CONTENT_URL;
     if (!url) { setContentMsg(""); return; }
     let alive = true;
-    setContentMsg("içerik yükleniyor…");
+    setContentMsg({ k: "app.contentLoading" });
     loadExternalContent(url).then((r) => {
       if (!alive) return;
-      if (r.error && r.error !== "no-url") setContentMsg("yüklenemedi: " + r.error);
-      else setContentMsg(r.total > 0 ? ("+" + r.total + " içerik yüklendi") : "içerik güncel");
+      if (r.error && r.error !== "no-url") setContentMsg({ k: "app.contentFail", vars: { e: r.error } });
+      else setContentMsg(r.total > 0 ? { k: "app.contentLoaded", vars: { n: r.total } } : { k: "app.contentUpToDate" });
     });
     return () => { alive = false; };
   }, [state.settings.contentUrl, reloadKey]);
@@ -101,15 +103,18 @@ export default function ApexFlow() {
   // ---- placement gate: no level yet => take the test first ----
   if (state.level === null) {
     return (
-      <div className={"af-root " + (state.settings.theme === "light" ? "is-light " : "")}>
-        <Styles />
-        <div className="af-bg" />
-        <div className="af-scan" />
-        <div className="af-stage">
-          <Placement onDone={(lv) => { store.setLevel(lv); store.touchStreak(); setView("catalog"); }} />
+      <LangContext.Provider value={lang}>
+        <div className={"af-root " + (state.settings.theme === "light" ? "is-light " : "")}>
+          <Styles />
+          <div className="af-bg" />
+          <div className="af-scan" />
+          <div className="af-stage">
+            <Placement onDone={(lv) => { store.setLevel(lv); store.touchStreak(); setView("catalog"); }}
+              onLang={(l) => store.setSetting("lang", l)} />
+          </div>
+          <div className="af-foot">{t(lang, "app.footPlace")}</div>
         </div>
-        <div className="af-foot">ApexFlow · seviye tespiti · ilerlemen bu cihazda kayıtlı kalır</div>
-      </div>
+      </LangContext.Provider>
     );
   }
 
@@ -118,6 +123,7 @@ export default function ApexFlow() {
   const isMock = view === "mock";
 
   return (
+    <LangContext.Provider value={lang}>
     <div className={"af-root " + themeCls + (flow ? "af-flow " : "") + (flash ? "af-flash-" + flash : "") + (isMock ? "af-mockmode " : "")}>
       <Styles />
       <div className="af-bg" />
@@ -151,10 +157,9 @@ export default function ApexFlow() {
       </div>
 
       {!isMock ? (
-        <div className="af-foot">
-          ApexFlow · seviye {state.level} · pratik amaçlıdır, band/TOEFL değerleri yaklaşıktır · ilerlemen bu cihazda kayıtlı
-        </div>
+        <div className="af-foot">{t(lang, "app.foot", { lv: state.level })}</div>
       ) : null}
     </div>
+    </LangContext.Provider>
   );
 }
