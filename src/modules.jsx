@@ -719,7 +719,7 @@ function MCQRunner({ items, award, points = 15, onFinish, footer }) {
   const [checked, setChecked] = useState(false);
   const [ok, setOk] = useState(0);
   const it = items[i];
-  function pick(idx) { if (!checked) setSel(idx); }
+  function pickOpt(idx) { if (!checked) setSel(idx); }
   function check() {
     if (sel === null || checked) return;
     setChecked(true);
@@ -744,7 +744,7 @@ function MCQRunner({ items, award, points = 15, onFinish, footer }) {
             else cls += " is-dim";
           } else if (idx === sel) cls += " is-sel";
           return (
-            <button key={idx} className={cls} onClick={() => pick(idx)} disabled={checked}>
+            <button key={idx} className={cls} onClick={() => pickOpt(idx)} disabled={checked}>
               <span className="af-mcq-key">{String.fromCharCode(65 + idx)}</span>
               <span>{o}</span>
               {checked && idx === it.ans ? <Check size={15} className="af-mcq-ic" /> : null}
@@ -781,7 +781,7 @@ export function Placement({ onDone, onLang }) {
   const [picking, setPicking] = useState(false);
   const pItems = useMemo(() => [...PLACEMENT].sort((a, b) => lvIndex(a.lv) - lvIndex(b.lv)), []);
   const it = pItems[i];
-  function pick(idx) { if (!checked) setSel(idx); }       // changeable until you confirm
+  function pickOpt(idx) { if (!checked) setSel(idx); }       // changeable until you confirm
   function check() {
     if (sel === null || checked) return;
     setChecked(true);
@@ -872,7 +872,7 @@ export function Placement({ onDone, onLang }) {
               else cls += " is-dim";
             } else if (idx === sel) cls += " is-sel";
             return (
-              <button key={idx} className={cls} onClick={() => pick(idx)} disabled={checked}>
+              <button key={idx} className={cls} onClick={() => pickOpt(idx)} disabled={checked}>
                 <span className="af-mcq-key">{String.fromCharCode(65 + idx)}</span><span>{o}</span>
                 {checked && idx === it.ans ? <Check size={15} className="af-mcq-ic" /> : null}
                 {checked && idx === sel && idx !== it.ans ? <X size={15} className="af-mcq-ic" /> : null}
