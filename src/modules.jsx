@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, createContext, useContext } from "react";
 import {
   Zap, Flame, Brain, BookOpen, Hammer, Mic, Timer, Target, Eye, EyeOff,
   Check, X, RotateCcw, Award, Layers, ArrowRight, Play, AlertTriangle,
@@ -6,9 +6,9 @@ import {
   Crosshair, Sparkles, Volume2, RefreshCw, GraduationCap, PenLine,
   ListChecks, Languages, BookMarked, Headphones, Repeat, Star, Lock,
   ChevronRight, RotateCw, Trophy, Pause, Sun, Moon, FileText, Replace, Filter,
-  MessageSquare, AlignLeft, Languages as LanguagesIcon, ClipboardList, BarChart3,
+  MessageSquare, AlignLeft, Languages as LanguagesIcon, ClipboardList, BarChart3, Heart,
 } from "lucide-react";
-import { tierFor, speak, stopSpeak, speechSupported, reviewQueue, analyzeWriting, scoreWithAI } from "./lib.js";
+import { tierFor, speak, stopSpeak, speechSupported, reviewQueue, analyzeWriting, scoreWithAI, SUPPORT_URL } from "./lib.js";
 import { useLang, t, pick, exTr, tagLabel, qtypeLabel, badgeCatLabel, fieldLabel, rankFor } from "./i18n.js";
 import {
   LEXICAL, PASSAGES, SYNTAX, SPEAKING,
@@ -56,6 +56,7 @@ function byField(arr, exam, field) {
 ============================================================ */
 export function TopHUD({ xp, combo, maxCombo, flow, lastGain, onReset }) {
   const lang = useLang();
+  const openSupport = useSupport();
   const { cur, next, pct } = tierFor(xp);
   return (
     <div className="af-hud">
@@ -90,6 +91,11 @@ export function TopHUD({ xp, combo, maxCombo, flow, lastGain, onReset }) {
           {lastGain ? <span className="af-gain">+{lastGain}</span> : null}
         </div>
 
+        {SUPPORT_URL && openSupport ? (
+          <button className="af-support-heart" onClick={openSupport} title={t(lang, "sup.heartTitle")}>
+            <Heart size={14} />
+          </button>
+        ) : null}
         <button className="af-reset" onClick={onReset} title="Reset session">
           <RotateCcw size={14} />
         </button>
@@ -195,6 +201,66 @@ function ModuleBar({ title, sub, onBack, right }) {
         {sub ? <span className="af-modbar-sub">{sub}</span> : null}
       </div>
       <div className="af-modbar-right">{right}</div>
+    </div>
+  );
+}
+
+/* ============================================================
+   SUPPORT LAYER  (Lemon Squeezy — link-only, no payment state)
+   Context lets header / settings / end-card open one shared modal.
+============================================================ */
+export const SupportContext = createContext(null);
+export const useSupport = () => useContext(SupportContext);
+
+function openCheckout() {
+  if (!SUPPORT_URL) return;
+  if (typeof window !== "undefined") window.open(SUPPORT_URL, "_blank", "noopener,noreferrer");
+}
+
+export function SupportModal({ onClose }) {
+  const lang = useLang();
+  if (!SUPPORT_URL) return null;
+  return (
+    <div className="af-modal-overlay" onClick={onClose}>
+      <div className="af-modal af-support-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="af-modal-x" onClick={onClose} aria-label="close"><X size={18} /></button>
+        <div className="af-support-head"><Heart size={22} /></div>
+        <h2 className="af-support-title">{t(lang, "sup.title")}</h2>
+        <p className="af-support-body">{t(lang, "sup.body")}</p>
+        <a className="af-support-cta" href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" onClick={onClose}>
+          {t(lang, "sup.cta")}
+        </a>
+        <p className="af-support-note">{t(lang, "sup.note")}</p>
+        <button className="af-support-later" onClick={onClose}>{t(lang, "sup.notNow")}</button>
+      </div>
+    </div>
+  );
+}
+
+// gentle end-of-module card: every 5th completion, ≥1 day apart, until dismissed
+function SupportEndCard({ store }) {
+  const lang = useLang();
+  const openSupport = useSupport();
+  const eligibleAtMount = () => {
+    if (!SUPPORT_URL) return false;
+    const sp = (store.state && store.state.supportPrompt) || { lastShown: 0, dismissed: false };
+    if (sp.dismissed) return false;
+    const doneCount = Object.keys(store.state.done || {}).length;
+    if (doneCount === 0 || doneCount % 5 !== 0) return false;
+    return Date.now() - (sp.lastShown || 0) >= 86400000;
+  };
+  const [show, setShow] = useState(eligibleAtMount);
+  useEffect(() => { if (show) store.noteSupportShown(); /* stamp once */ }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!show) return null;
+  return (
+    <div className="af-support-card">
+      <button className="af-support-card-x" onClick={() => setShow(false)} aria-label="close"><X size={14} /></button>
+      <span className="af-support-card-ic"><Heart size={16} /></span>
+      <span className="af-support-card-text">{t(lang, "sup.cardText")}</span>
+      <div className="af-support-card-actions">
+        <button className="af-support-card-cta" onClick={() => { setShow(false); openSupport && openSupport(); }}>{t(lang, "sup.cta")}</button>
+        <button className="af-support-card-dismiss" onClick={() => { store.dismissSupport(); setShow(false); }}>{t(lang, "sup.dontShow")}</button>
+      </div>
     </div>
   );
 }
@@ -1090,6 +1156,7 @@ function levelPct(level, state) {
 
 export function Catalog({ store, go, content = {}, onFocus }) {
   const lang = useLang();
+  const openSupport = useSupport();
   const { state, setLevel, setSetting } = store;
   const userLv = state.level || "A1";
   const theme = state.settings.theme || "dark";
@@ -1296,6 +1363,13 @@ export function Catalog({ store, go, content = {}, onFocus }) {
           </div>
           <div className="af-keynote">{t(lang, "cat.contentNote")}</div>
         </div>
+        {SUPPORT_URL && openSupport ? (
+          <div className="af-support-settings">
+            <div className="af-support-settings-cap"><Heart size={14} /> {t(lang, "sup.settingsCap")}</div>
+            <div className="af-support-settings-desc">{t(lang, "sup.settingsDesc")}</div>
+            <button className="af-support-settings-btn" onClick={openSupport}>{t(lang, "sup.cta")}</button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -1333,6 +1407,7 @@ export function VocabReview({ store, onBack }) {
             <div className="af-result-cap">{t(lang, "vr.doneCap")}</div>
             <Trophy size={40} className="af-result-trophy" />
             <p className="af-result-blurb">{t(lang, "vr.doneBlurb", { n: queue.length })}</p>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         </div>
@@ -1501,6 +1576,7 @@ function GrammarLesson({ lesson, store, award, onBack }) {
             <div className="af-result-cap">{t(lang, "gr.doneCap")}</div>
             <div className="af-result-lv">{score}/{lesson.items.length}</div>
             <p className="af-result-blurb">{t(lang, "gr.doneBlurb", { t: lesson.title })}</p>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "gr.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -1612,6 +1688,7 @@ function ListeningItem({ item, store, award, onBack }) {
             <div className="af-result-cap">{t(lang, "li.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.items.length}</div>
             <p className="af-result-blurb">{t(lang, "li.doneBlurb")}</p>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "li.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -1812,6 +1889,7 @@ function ArticleItem({ item, store, award, onBack }) {
             <div className="af-result-cap">{t(lang, "ar.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.items.length}</div>
             <p className="af-result-blurb">{t(lang, "ar.doneBlurb")}</p>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ar.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -1897,6 +1975,7 @@ function ClozeItem({ item, store, award, onBack }) {
             <div className="af-result-cap">{t(lang, "cl.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.blanks.length}</div>
             <p className="af-result-blurb">{t(lang, "cl.doneBlurb")}</p>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ar.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -1943,6 +2022,7 @@ export function RestateRoom({ level, store, award, onBack, exam, field }) {
             <div className="af-result-cap">{t(lang, "rs.doneCap")}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
             <p className="af-result-blurb">{t(lang, "rs.doneBlurb")}</p>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2002,6 +2082,7 @@ export function OddoutRoom({ level, store, award, onBack, exam, field }) {
             <div className="af-result-cap">{t(lang, "oo.doneCap")}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
             <p className="af-result-blurb">{t(lang, "oo.doneBlurb")}</p>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2037,6 +2118,7 @@ function DeckRoom({ title, sub, empty, quizItems, items, prefix, store, award, o
             <div className="af-result-cap">{doneCap}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
             <p className="af-result-blurb">{t(lang, "deck.doneBlurb")}</p>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2395,6 +2477,7 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
             <div className="af-result-lv">{result && result.score != null ? result.score + "/30" : "—"}</div>
             {result && result.offline ? <div className="af-band-cap">{t(lang, "ti.offlineCap")}</div> : <div className="af-band-cap">{t(lang, "ti.aiCap")}</div>}
             <div className="af-ai-out af-ti-feedback">{result ? result.raw : ""}</div>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ti.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2583,6 +2666,7 @@ export function MockRoom({ level, store, onBack }) {
         <div className="af-result-lv">{correct}/{questions.length}</div>
         <div className="af-band-cap">{t(lang, "mk.summary", { p: pct, e: mmss(elapsed), t: mmss(totalSec) })}</div>
       </div>
+      <SupportEndCard store={store} />
       <div className="af-mock-breakdown">
         <div className="af-mock-bd-cap">{t(lang, "mk.byType")}</div>
         {Object.entries(breakdown).map(([ty, b]) => (
@@ -2726,6 +2810,7 @@ function ParaphraseItem({ item, store, award, onBack }) {
             <div className="af-band-cap">{result.offline ? t(lang, "ti.offlineCap") : t(lang, "ti.aiCap")}</div>
             <div className="af-ai-out af-ti-feedback">{result.raw}</div>
             <div className="af-pp-sample"><span className="af-write-cap">{t(lang, "pr.sample")}</span> {item.sample}</div>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "pr.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2848,6 +2933,7 @@ function ErrorHuntItem({ item, store, award, onBack }) {
                 </div>
               ))}
             </div>
+            <SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "eh.others")} <ArrowRight size={16} /></button>
           </div>
         )}

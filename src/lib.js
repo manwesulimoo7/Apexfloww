@@ -4,6 +4,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BANDS, VOCAB, LISTENING, ARTICLES, CLOZE, RESTATE, ODDOUT, DIALOGUE, PARACOMP, TRANSLATE, TOEFL_INTEGRATED, PARAPHRASE, ERRORHUNT, GRAMMAR, WRITING } from "./catalog.js";
 
+// === DESTEK LİNKİ (Lemon Squeezy checkout) ===
+// Boş string ise tüm destek arayüzü (header ikonu, Ayarlar bölümü, bitiş kartı) render edilmez.
+export const SUPPORT_URL = "https://apexfloww.lemonsqueezy.com/checkout/buy/35976f5b-2775-4ab8-98d2-8ed10b1a5c7a";
+
+
 /* ---------- band / score concordance ---------- */
 export function tierFor(xp) {
   let cur = BANDS[0], next = null;
@@ -33,6 +38,7 @@ function defaultState() {
     done: {},               // "grammar:g_tobe" -> true, etc.
     stats: {},              // questionType -> { c: correctCount, t: totalCount }  (Gelişim Raporu)
     focusMinutes: 0,        // cumulative completed focus-mode minutes
+    supportPrompt: { lastShown: 0, dismissed: false },  // gentle support card gating
     daily: { date: null, vocab: 0, xp: 0, grammar: 0, listening: 0, writing: 0 },
     settings: { sound: true, rate: 0.95, apiKey: "", theme: "dark", contentUrl: "", lang: "tr" },
   };
@@ -49,7 +55,8 @@ function loadState() {
       settings: { ...defaultState().settings, ...(parsed.settings || {}) },
       daily: { ...defaultState().daily, ...(parsed.daily || {}) },
       srs: parsed.srs || {}, done: parsed.done || {},
-      stats: parsed.stats || {}, focusMinutes: parsed.focusMinutes || 0 };
+      stats: parsed.stats || {}, focusMinutes: parsed.focusMinutes || 0,
+      supportPrompt: { ...defaultState().supportPrompt, ...(parsed.supportPrompt || {}) } };
   } catch { return defaultState(); }
 }
 
@@ -209,9 +216,17 @@ export function useStore() {
   const setSetting = useCallback((k, v) =>
     update((s) => ({ ...s, settings: { ...s.settings, [k]: v } })), [update]);
 
+  // support prompt: stamp last-shown (preserve dismissed) / dismiss permanently
+  const noteSupportShown = useCallback(() => update((s) => ({
+    ...s, supportPrompt: { ...(s.supportPrompt || { dismissed: false }), lastShown: Date.now() },
+  })), [update]);
+  const dismissSupport = useCallback(() => update((s) => ({
+    ...s, supportPrompt: { ...(s.supportPrompt || { lastShown: 0 }), dismissed: true },
+  })), [update]);
+
   const resetProgress = useCallback(() => setState(defaultState()), []);
 
-  return { state, touchStreak, award, bumpDaily, setLevel, gradeCard, markDone, recordStat, addFocusMinutes, setSetting, resetProgress };
+  return { state, touchStreak, award, bumpDaily, setLevel, gradeCard, markDone, recordStat, addFocusMinutes, noteSupportShown, dismissSupport, setSetting, resetProgress };
 }
 
 /* ============================================================

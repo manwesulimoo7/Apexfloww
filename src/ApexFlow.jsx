@@ -5,20 +5,23 @@
 ============================================================ */
 import { useState, useRef, useEffect } from "react";
 import { Styles } from "./styles.jsx";
-import { useStore, loadExternalContent, CONTENT_URL } from "./lib.js";
+import { useStore, loadExternalContent, CONTENT_URL, SUPPORT_URL } from "./lib.js";
 import { LangContext, t } from "./i18n.js";
 import {
   TopHUD, Catalog, Placement, VocabReview, WordListRoom, GrammarHub,
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
   SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, OddoutRoom,
   DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, MockRoom,
-  ParaphraseRoom, ErrorHuntRoom, FocusBar,
+  ParaphraseRoom, ErrorHuntRoom, FocusBar, SupportContext, SupportModal,
 } from "./modules.jsx";
 
 export default function ApexFlow() {
   const store = useStore();
   const { state } = store;
   const lang = (state.settings && state.settings.lang) || "tr";
+
+  const [supportOpen, setSupportOpen] = useState(false);
+  const openSupport = SUPPORT_URL ? () => setSupportOpen(true) : null;
 
   const [view, setView] = useState("catalog");
   const [ctx, setCtx] = useState({});
@@ -124,6 +127,7 @@ export default function ApexFlow() {
 
   return (
     <LangContext.Provider value={lang}>
+    <SupportContext.Provider value={openSupport}>
     <div className={"af-root " + themeCls + (flow ? "af-flow " : "") + (flash ? "af-flash-" + flash : "") + (isMock ? "af-mockmode " : "")}>
       <Styles />
       <div className="af-bg" />
@@ -159,7 +163,10 @@ export default function ApexFlow() {
       {!isMock ? (
         <div className="af-foot">{t(lang, "app.foot", { lv: state.level })}</div>
       ) : null}
+
+      {supportOpen ? <SupportModal onClose={() => setSupportOpen(false)} /> : null}
     </div>
+    </SupportContext.Provider>
     </LangContext.Provider>
   );
 }

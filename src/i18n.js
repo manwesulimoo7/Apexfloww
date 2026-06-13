@@ -238,6 +238,17 @@ export const STRINGS = {
     "pc.skipPrep": "hazırlığı atla →", "pc.endTalk": "konuşmayı bitir →",
     "pc.selfReview": "Öz-değerlendirme — hangilerini gerçekten kullandın?",
     "pc.score": "PUANLA", "pc.phrases": "kalıp", "pc.nextPrompt": "SONRAKİ PROMPT",
+    /* support layer */
+    "sup.heartTitle": "ApexFlow'u Destekle",
+    "sup.title": "ApexFlow'u Destekle",
+    "sup.body": "ApexFlow tamamen ücretsiz ve reklamsız. Beğendiysen, küçük bir desteğin yeni içerikleri ve geliştirmeleri sürdürmemize yardımcı olur. Tamamen gönüllü — uygulamayı kullanman bile bizim için değerli.",
+    "sup.cta": "Destek Ol 💚",
+    "sup.note": "Ödeme güvenli şekilde Lemon Squeezy üzerinden işlenir. İstediğin tutarı belirleyebilirsin.",
+    "sup.notNow": "Şimdi değil",
+    "sup.settingsCap": "ApexFlow'u Destekle",
+    "sup.settingsDesc": "Uygulama ücretsiz ve reklamsız. Dilersen gelişimine küçük bir katkı yapabilirsin.",
+    "sup.cardText": "ApexFlow işine yarıyorsa, küçük bir destek çok şey değiştirir 💚",
+    "sup.dontShow": "Bir daha gösterme",
   },
   en: {
     "common.check": "Check", "common.continue": "Continue", "common.finish": "Finish",
@@ -401,6 +412,17 @@ export const STRINGS = {
     "pc.skipPrep": "skip prep →", "pc.endTalk": "finish speaking →",
     "pc.selfReview": "Self-review — which ones did you actually use?",
     "pc.score": "SCORE", "pc.phrases": "phrases", "pc.nextPrompt": "NEXT PROMPT",
+    /* support layer */
+    "sup.heartTitle": "Support ApexFlow",
+    "sup.title": "Support ApexFlow",
+    "sup.body": "ApexFlow is completely free and ad-free. If it helps you, a small contribution keeps new content and improvements coming. Entirely optional — just using the app already means a lot.",
+    "sup.cta": "Support 💚",
+    "sup.note": "Payment is processed securely via Lemon Squeezy. You choose the amount.",
+    "sup.notNow": "Not now",
+    "sup.settingsCap": "Support ApexFlow",
+    "sup.settingsDesc": "The app is free and ad-free. If you'd like, you can chip in to its development.",
+    "sup.cardText": "If ApexFlow helps you, a small contribution goes a long way 💚",
+    "sup.dontShow": "Don't show again",
   },
 };
 
