@@ -66,6 +66,22 @@ export default function ApexFlow() {
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
   }, [focus]);
+  // ---- browser History API: back button navigates screens instead of leaving the site ----
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // seed a base entry for the catalog so the back button has somewhere to land
+    if (!window.history.state || !window.history.state.view) {
+      window.history.replaceState({ view: "catalog", ctx: {} }, "");
+    }
+    const onPop = (e) => {
+      const st = e.state && e.state.view ? e.state : { view: "catalog", ctx: {} };
+      applyNav(st.view, st.ctx || {});
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function startFocus(min) { setDistractions(0); setNowTs(Date.now()); setFocus({ startedAt: Date.now(), endsAt: Date.now() + min * 60000, durationMin: min }); }
   function endFocus() {
     if (focus) {
@@ -99,8 +115,28 @@ export default function ApexFlow() {
     gainTimer.current = setTimeout(() => { setLastGain(0); setFlash(null); }, 900);
   }
 
-  function go(key, c = {}) { setCtx(c); setView(key); setCombo(0); setLastGain(0); setFlash(null); }
-  function home() { setView("catalog"); setCombo(0); setLastGain(0); setFlash(null); }
+  // shared screen switch — keeps the original session resets in one place so
+  // go(), home() and popstate (browser back) all behave identically.
+  function applyNav(key, c) {
+    setCtx(c || {});
+    setView(key);
+    setCombo(0); setLastGain(0); setFlash(null);
+  }
+  function go(key, c = {}) {
+    applyNav(key, c);
+    if (typeof window !== "undefined") window.history.pushState({ view: key, ctx: c }, "");
+  }
+  function home() {
+    if (view === "catalog") { applyNav("catalog", {}); return; }
+    // a module screen was reached via go() => one history entry to pop;
+    // popstate restores the previous (catalog) screen without exiting the site.
+    if (typeof window !== "undefined" && window.history.state && window.history.state.view && window.history.state.view !== "catalog") {
+      window.history.back();
+    } else {
+      applyNav("catalog", {});
+      if (typeof window !== "undefined") window.history.pushState({ view: "catalog", ctx: {} }, "");
+    }
+  }
   function resetSession() { setCombo(0); setMaxCombo(0); setLastGain(0); setFlash(null); }
 
   // ---- placement gate: no level yet => take the test first ----
