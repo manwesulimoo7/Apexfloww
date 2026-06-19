@@ -39,6 +39,11 @@ function defaultState() {
     stats: {},              // questionType -> { c: correctCount, t: totalCount }  (Gelişim Raporu)
     focusMinutes: 0,        // cumulative completed focus-mode minutes
     supportPrompt: { lastShown: 0, dismissed: false },  // gentle support card gating
+    dailyGoal: { target: 20, dateKey: "", progress: 0 },     // daily question goal (ethical retention)
+    streakFreeze: { available: 1, lastRefill: "", justFroze: false }, // forgiving streak
+    achievements: [],        // unlocked milestone ids
+    achievementsSeeded: false,
+    weeklyLog: {},           // "YYYY-MM-DD" -> questions solved that day
     daily: { date: null, vocab: 0, xp: 0, grammar: 0, listening: 0, writing: 0 },
     settings: { sound: true, rate: 0.95, apiKey: "", theme: "dark", contentUrl: "", lang: "tr" },
   };
@@ -56,7 +61,12 @@ function loadState() {
       daily: { ...defaultState().daily, ...(parsed.daily || {}) },
       srs: parsed.srs || {}, done: parsed.done || {},
       stats: parsed.stats || {}, focusMinutes: parsed.focusMinutes || 0,
-      supportPrompt: { ...defaultState().supportPrompt, ...(parsed.supportPrompt || {}) } };
+      supportPrompt: { ...defaultState().supportPrompt, ...(parsed.supportPrompt || {}) },
+      dailyGoal: { ...defaultState().dailyGoal, ...(parsed.dailyGoal || {}) },
+      streakFreeze: { ...defaultState().streakFreeze, ...(parsed.streakFreeze || {}) },
+      achievements: Array.isArray(parsed.achievements) ? parsed.achievements : [],
+      achievementsSeeded: !!parsed.achievementsSeeded,
+      weeklyLog: parsed.weeklyLog || {} };
   } catch { return defaultState(); }
 }
 
@@ -69,6 +79,22 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 function dayDiff(a, b) {
   if (!a || !b) return Infinity;
   return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+// coarse year-week key for the weekly streak-freeze refill
+function weekKey(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  const wk = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+  return d.getFullYear() + "-W" + wk;
+}
+// keep weeklyLog small: drop entries older than ~16 days
+function pruneWeekly(log) {
+  const cutoff = Date.now() - 16 * 86400000;
+  const out = {};
+  for (const k of Object.keys(log || {})) {
+    if (new Date(k + "T00:00:00").getTime() >= cutoff) out[k] = log[k];
+  }
+  return out;
 }
 // reset the per-day task counters when the calendar day changes
 function rollDaily(s) {
@@ -151,16 +177,60 @@ export function useStore() {
     });
   }, []);
 
-  // daily streak: call whenever the user is active
+  // daily streak: call whenever the user is active.
+  // Forgiving: a single missed day is auto-covered by a streak-freeze if available.
+  // Freezes refill +1 per calendar week (capped at 2). No blame, no fake pressure.
   const touchStreak = useCallback(() => {
     update((s) => {
       const t = todayStr();
-      if (s.streak.last === t) return s;
+      // weekly freeze refill
+      let sf = s.streakFreeze || { available: 1, lastRefill: "", justFroze: false };
+      const wk = weekKey(t);
+      if (sf.lastRefill !== wk) sf = { ...sf, available: Math.min(2, (sf.available || 0) + 1), lastRefill: wk };
+      if (s.streak.last === t) {
+        return sf === s.streakFreeze ? s : { ...s, streakFreeze: sf };
+      }
       const d = dayDiff(s.streak.last, t);
-      const count = d === 1 ? s.streak.count + 1 : 1;
-      return { ...s, streak: { count, last: t } };
+      let count, froze = false;
+      if (s.streak.last == null) count = 1;
+      else if (d === 1) count = s.streak.count + 1;
+      else if (d === 2 && (sf.available || 0) > 0) { count = s.streak.count + 1; sf = { ...sf, available: sf.available - 1 }; froze = true; }
+      else count = 1;
+      return { ...s, streak: { count, last: t }, streakFreeze: { ...sf, justFroze: froze } };
     });
   }, [update]);
+  const clearFreezeNotice = useCallback(() => update((s) =>
+    (s.streakFreeze && s.streakFreeze.justFroze) ? { ...s, streakFreeze: { ...s.streakFreeze, justFroze: false } } : s), [update]);
+
+  // daily question goal + weekly activity log (resets progress on a new day)
+  const addProgress = useCallback((n = 1) => update((s) => {
+    const t = todayStr();
+    const dg = s.dailyGoal || { target: 20, dateKey: "", progress: 0 };
+    const target = dg.target || 20;
+    const before = dg.dateKey === t ? (dg.progress || 0) : 0;
+    const progress = before + n;
+    const justCompleted = (before < target && progress >= target) || (dg.dateKey === t && dg.justCompleted);
+    const wl = pruneWeekly({ ...(s.weeklyLog || {}) });
+    wl[t] = (wl[t] || 0) + n;
+    return { ...s, dailyGoal: { target, dateKey: t, progress, justCompleted }, weeklyLog: wl };
+  }), [update]);
+  const setDailyGoal = useCallback((target) => update((s) => {
+    const t = todayStr();
+    const dg = s.dailyGoal || { target: 20, dateKey: t, progress: 0 };
+    return { ...s, dailyGoal: { ...dg, target, dateKey: dg.dateKey || t } };
+  }), [update]);
+  const clearGoalCelebration = useCallback(() => update((s) =>
+    (s.dailyGoal && s.dailyGoal.justCompleted) ? { ...s, dailyGoal: { ...s.dailyGoal, justCompleted: false } } : s), [update]);
+
+  // milestone achievements (ids); seed silently for existing users
+  const unlockAchievements = useCallback((ids) => update((s) => {
+    const have = new Set(s.achievements || []);
+    const add = (ids || []).filter((id) => !have.has(id));
+    if (!add.length) return s;
+    return { ...s, achievements: [...(s.achievements || []), ...add] };
+  }), [update]);
+  const seedAchievements = useCallback((ids) => update((s) =>
+    s.achievementsSeeded ? s : { ...s, achievements: Array.from(new Set([...(s.achievements || []), ...(ids || [])])), achievementsSeeded: true }), [update]);
 
   // award(points, isCorrect, combo) — combo passed from session
   const award = useCallback((points, isCorrect, combo = 0) => {
@@ -226,7 +296,7 @@ export function useStore() {
 
   const resetProgress = useCallback(() => setState(defaultState()), []);
 
-  return { state, touchStreak, award, bumpDaily, setLevel, gradeCard, markDone, recordStat, addFocusMinutes, noteSupportShown, dismissSupport, setSetting, resetProgress };
+  return { state, touchStreak, clearFreezeNotice, award, bumpDaily, addProgress, setDailyGoal, clearGoalCelebration, unlockAchievements, seedAchievements, setLevel, gradeCard, markDone, recordStat, addFocusMinutes, noteSupportShown, dismissSupport, setSetting, resetProgress };
 }
 
 /* ============================================================

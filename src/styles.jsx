@@ -903,6 +903,43 @@ export function Styles() {
 .af-q-next:active:not(:disabled),.af-mcq-opt:active,.af-opt:active,.af-srs-grade:active{transform:scale(.985);}
 
 
+/* ============================================================
+   ETHICAL RETENTION — toasts, daily goal, weekly, continue
+============================================================ */
+.af-toasts{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center;width:max-content;max-width:92vw;pointer-events:none;}
+.af-toast{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--accent-2);color:var(--ink);border-radius:11px;padding:10px 16px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);cursor:pointer;font-family:var(--sans);animation:afToastIn .25s ease;}
+@keyframes afToastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
+
+.af-goal{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);transition:transform .2s ease,box-shadow .2s ease;}
+.af-goal.is-pulse{animation:afGoalPulse 1.2s ease;}
+@keyframes afGoalPulse{0%,100%{transform:scale(1);}30%{transform:scale(1.02);box-shadow:0 0 0 3px rgba(200,130,26,.35),var(--shadow);}}
+.af-goal-ring{flex:none;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent-2) var(--gp,0%), var(--line) 0);transition:background .5s ease;}
+.af-goal-ring-in{width:48px;height:48px;border-radius:50%;background:var(--surface);display:grid;place-items:center;color:var(--accent-2);}
+.af-goal.is-done .af-goal-ring{background:conic-gradient(var(--good) 100%, var(--good) 0);}
+.af-goal.is-done .af-goal-ring-in{color:var(--good);}
+.af-goal-pct{font-family:var(--sans);font-weight:800;font-size:14px;color:var(--accent-2);}
+.af-goal-body{flex:1;min-width:0;}
+.af-goal-title{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink);}
+.af-goal-count{font-size:12.5px;color:var(--ink-soft);margin:2px 0 8px;}
+.af-goal-sel{display:flex;gap:6px;}
+.af-goal-opt{background:var(--panel2);border:1px solid var(--line2);color:var(--ink-soft);border-radius:8px;padding:4px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:.15s;}
+.af-goal-opt:hover{border-color:var(--accent-2);}
+.af-goal-opt.is-on{background:rgba(200,130,26,.14);border-color:var(--accent-2);color:var(--accent-2);}
+
+.af-week{display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin-bottom:14px;font-size:12.5px;color:var(--ink-soft);}
+.af-week svg{color:var(--accent-2);}
+.af-week b{color:var(--ink);}
+.af-freeze{color:var(--accent)!important;}
+
+.af-cont{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;background:rgba(14,107,99,.07);border:1px solid var(--em-d);border-radius:12px;padding:11px 14px;margin:14px auto 0;max-width:460px;}
+.af-cont-text{color:var(--ink);font-size:13.5px;font-weight:600;}
+.af-cont-go{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--on-accent);border:0;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:.15s;}
+.af-cont-go:hover{filter:brightness(1.08);}
+.af-cont-x{background:none;border:none;color:var(--ink-soft);cursor:pointer;padding:2px;display:inline-flex;}
+.af-cont-x:hover{color:var(--ink);}
+
+.af-wl-progress{font-size:12.5px;color:var(--accent-2);font-weight:600;margin-bottom:10px;font-family:var(--sans);}
+
 `}</style>
   );
 }

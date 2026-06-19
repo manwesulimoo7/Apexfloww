@@ -212,6 +212,10 @@ function ModuleBar({ title, sub, onBack, right }) {
 export const SupportContext = createContext(null);
 export const useSupport = () => useContext(SupportContext);
 
+// celebration toasts (gentle, auto-dismissing) — provided by the root
+export const ToastContext = createContext(() => {});
+export const useToast = () => useContext(ToastContext);
+
 function openCheckout() {
   if (!SUPPORT_URL) return;
   if (typeof window !== "undefined") window.open(SUPPORT_URL, "_blank", "noopener,noreferrer");
@@ -261,6 +265,20 @@ function SupportEndCard({ store }) {
         <button className="af-support-card-cta" onClick={() => { setShow(false); openSupport && openSupport(); }}>{t(lang, "sup.cta")}</button>
         <button className="af-support-card-dismiss" onClick={() => { store.dismissSupport(); setShow(false); }}>{t(lang, "sup.dontShow")}</button>
       </div>
+    </div>
+  );
+}
+
+// gentle, low-friction "keep going" nudge on result screens (dismissible, no pressure)
+function ContinueNudge({ onContinue }) {
+  const lang = useLang();
+  const [hidden, setHidden] = useState(false);
+  if (hidden || !onContinue) return null;
+  return (
+    <div className="af-cont">
+      <span className="af-cont-text">{t(lang, "cont.more")}</span>
+      <button className="af-cont-go" onClick={onContinue}>{t(lang, "cont.go")} <ArrowRight size={14} /></button>
+      <button className="af-cont-x" onClick={() => setHidden(true)} aria-label="close"><X size={13} /></button>
     </div>
   );
 }
@@ -778,8 +796,9 @@ export function PressureCooker({ onBack, award }) {
 /* ============================================================
    shared : MCQ runner (used by grammar + listening)
 ============================================================ */
-function MCQRunner({ items, award, points = 15, onFinish, footer }) {
+function MCQRunner({ items, award, points = 15, onFinish, footer, store }) {
   const lang = useLang();
+  const pushToast = useToast();
   const [i, setI] = useState(0);
   const [sel, setSel] = useState(null);       // current pick — changeable until checked
   const [checked, setChecked] = useState(false);
@@ -795,7 +814,14 @@ function MCQRunner({ items, award, points = 15, onFinish, footer }) {
   }
   function next() {
     if (i + 1 < items.length) { setI(i + 1); setSel(null); setChecked(false); }
-    else onFinish(ok);
+    else {
+      // gentle milestone: a flawless set (>=3 questions, no mistakes)
+      if (store && items.length >= 3 && ok === items.length && !((store.state.achievements || []).includes("perfect"))) {
+        store.unlockAchievements(["perfect"]);
+        pushToast(t(lang, "achv.unlocked", { name: lang === "en" ? "Perfect Set" : "Kusursuz Set" }));
+      }
+      onFinish(ok);
+    }
   }
   return (
     <div className="af-mcq">
@@ -1047,6 +1073,8 @@ const BADGES = [
   { id: "wri3",      cat: "Beceriler", name: "Üretken Yazar", name_en: "Prolific Writer",    desc: "3 yazma görevi bitir", desc_en: "Finish 3 writing tasks",       ic: <PenLine size={18} />,       test: (s) => doneCount(s, "writing:") >= 3 },
   { id: "art3",      cat: "Beceriler", name: "Sayfa Çeviren", name_en: "Page Turner",    desc: "3 okuma parçası bitir", desc_en: "Finish 3 reading passages",      ic: <BookOpen size={18} />,      test: (s) => doneCount(s, "article:") >= 3 },
   { id: "art10",     cat: "Beceriler", name: "Kitap Kurdu", name_en: "Bookworm",      desc: "10 okuma parçası bitir", desc_en: "Finish 10 reading passages",     ic: <BookOpen size={18} />,      test: (s) => doneCount(s, "article:") >= 10 },
+  { id: "firstmod",  cat: "Beceriler", name: "İlk Modül", name_en: "First Module",   desc: "İlk modülünü bitir", desc_en: "Finish your first module",           ic: <Play size={18} />,          test: (s) => Object.keys(s.done || {}).length >= 1 },
+  { id: "perfect",   cat: "Beceriler", name: "Kusursuz Set", name_en: "Perfect Set", desc: "Bir seti hatasız bitir", desc_en: "Finish a set with no mistakes",   ic: <Star size={18} />,          test: (s) => (s.achievements || []).includes("perfect") },
   { id: "allskill",  cat: "Beceriler", name: "Çok Yönlü", name_en: "All-Rounder",        desc: "Her beceriden en az 1", desc_en: "At least 1 in every skill",      ic: <Award size={18} />,         test: (s) => doneCount(s, "grammar:") >= 1 && doneCount(s, "listening:") >= 1 && doneCount(s, "writing:") >= 1 && doneCount(s, "article:") >= 1 },
 
   // — Hacim —
@@ -1174,6 +1202,66 @@ export function Catalog({ store, go, content = {}, onFocus }) {
     [learnLv]
   );
 
+  // ---- ethical retention: daily goal, freeze notice, achievement toasts ----
+  const pushToast = useToast();
+  const today = new Date().toISOString().slice(0, 10);
+  const goal = state.dailyGoal || { target: 20, dateKey: "", progress: 0 };
+  const goalTarget = goal.target || 20;
+  const goalProgress = goal.dateKey === today ? (goal.progress || 0) : 0;
+  const goalPct = Math.min(100, Math.round((goalProgress / goalTarget) * 100));
+  const goalDone = goalProgress >= goalTarget;
+  const [ringPulse, setRingPulse] = useState(false);
+  const freezeAvail = (state.streakFreeze && state.streakFreeze.available) || 0;
+
+  // weekly summary from weeklyLog (last 7 days)
+  const week = useMemo(() => {
+    let q = 0, d = 0;
+    const wl = state.weeklyLog || {};
+    for (let i = 0; i < 7; i++) {
+      const key = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      const n = wl[key] || 0;
+      if (n > 0) { q += n; d += 1; }
+    }
+    return { q, d };
+  }, [state.weeklyLog]);
+
+  // seed achievements silently for existing users; toast newly-earned milestones
+  useEffect(() => {
+    const earnedIds = BADGES.filter((b) => b.test(state)).map((b) => b.id);
+    if (!state.achievementsSeeded) { store.seedAchievements(earnedIds); return; }
+    const have = new Set(state.achievements || []);
+    const fresh = earnedIds.filter((id) => !have.has(id));
+    if (fresh.length) {
+      store.unlockAchievements(fresh);
+      fresh.forEach((id) => {
+        const b = BADGES.find((x) => x.id === id);
+        if (b) pushToast(t(lang, "achv.unlocked", { name: pick(lang, b.name, b.name_en) }));
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.xp, state.total, state.correct, state.streak.count, state.done, state.srs, state.bestCombo, state.achievements, state.achievementsSeeded]);
+
+  // gentle goal-completion celebration
+  useEffect(() => {
+    if (state.dailyGoal && state.dailyGoal.justCompleted) {
+      pushToast(t(lang, "goal.done"));
+      setRingPulse(true);
+      store.clearGoalCelebration();
+      const id = setTimeout(() => setRingPulse(false), 1400);
+      return () => clearTimeout(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.dailyGoal && state.dailyGoal.justCompleted]);
+
+  // forgiving-streak notice (no blame)
+  useEffect(() => {
+    if (state.streakFreeze && state.streakFreeze.justFroze) {
+      pushToast(t(lang, "freeze.used"));
+      store.clearFreezeNotice();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.streakFreeze && state.streakFreeze.justFroze]);
+
   return (
     <div className="af-home af-catalog">
       <div className="af-cat-head">
@@ -1186,6 +1274,7 @@ export function Catalog({ store, go, content = {}, onFocus }) {
         </div>
         <div className="af-cat-stats">
           <span className="af-cat-stat"><Flame size={13} /> {t(lang, "cat.days", { n: state.streak.count })}</span>
+          {freezeAvail > 0 ? <span className="af-cat-stat af-freeze" title={t(lang, "freeze.have", { n: freezeAvail })}>❄️ {freezeAvail}</span> : null}
           <span className="af-cat-stat"><TrendingUp size={13} /> {state.xp} XP</span>
           <span className="af-cat-stat"><Repeat size={13} /> {t(lang, "cat.reviews", { n: dueCount })}</span>
           <button className="af-theme-quick" title={t(lang, "cat.themeTitle")}
@@ -1195,13 +1284,32 @@ export function Catalog({ store, go, content = {}, onFocus }) {
         </div>
       </div>
 
+      <div className={"af-goal " + (goalDone ? "is-done " : "") + (ringPulse ? "is-pulse" : "")}>
+        <div className="af-goal-ring" style={{ "--gp": goalPct + "%" }}>
+          <div className="af-goal-ring-in">{goalDone ? <Check size={22} /> : <span className="af-goal-pct">{goalPct}%</span>}</div>
+        </div>
+        <div className="af-goal-body">
+          <div className="af-goal-title">{t(lang, "goal.title")}</div>
+          <div className="af-goal-count">{goalDone ? t(lang, "goal.done") : t(lang, "goal.of", { p: goalProgress, n: goalTarget })}</div>
+          <div className="af-goal-sel">
+            {[10, 20, 40].map((n) => (
+              <button key={n} className={"af-goal-opt " + (goalTarget === n ? "is-on" : "")} onClick={() => store.setDailyGoal(n)}>{n}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {week.q > 0 ? (
+        <div className="af-week"><BarChart3 size={13} /> <b>{t(lang, "week.title")}:</b> {t(lang, "week.summary", { q: week.q, d: week.d })}</div>
+      ) : null}
+
       <button className="af-srs-cta" onClick={() => go("vocab", {})}>
         <div className="af-srs-cta-l">
           <Repeat size={18} />
           <div>
-            <div className="af-srs-cta-title">{t(lang, "cat.srsTitle")}</div>
+            <div className="af-srs-cta-title">{t(lang, "review.title")}</div>
             <div className="af-srs-cta-sub">
-              {dueCount > 0 ? t(lang, "cat.srsDue", { n: dueCount }) : freshCount > 0 ? t(lang, "cat.srsFresh", { n: freshCount }) : t(lang, "cat.srsDone")}
+              {dueCount > 0 ? t(lang, "review.due", { n: dueCount }) : freshCount > 0 ? t(lang, "review.fresh", { n: freshCount }) : t(lang, "review.clear")}
             </div>
           </div>
         </div>
@@ -1407,7 +1515,7 @@ export function VocabReview({ store, onBack }) {
             <div className="af-result-cap">{t(lang, "vr.doneCap")}</div>
             <Trophy size={40} className="af-result-trophy" />
             <p className="af-result-blurb">{t(lang, "vr.doneBlurb", { n: queue.length })}</p>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         </div>
@@ -1477,6 +1585,7 @@ export function WordListRoom({ store, onBack }) {
     <>
       <ModuleBar title={pick(lang, MODULE_INFO.wordlist.name, MODULE_INFO.wordlist.name_en)} sub={pick(lang, MODULE_INFO.wordlist.sub, MODULE_INFO.wordlist.sub_en)} onBack={onBack} />
       <div className="af-substage">
+        <div className="af-wl-progress">{t(lang, "wl.progress", { c: srsStarted(store.state), n: VOCAB.length })}</div>
         <div className="af-wl-levels">
           {LV_ORDER.map((id) => (
             <button key={id} className={"af-wl-lvbtn " + (id === lv ? "is-on" : "")} onClick={() => selectLv(id)}>
@@ -1569,14 +1678,14 @@ function GrammarLesson({ lesson, store, award, onBack }) {
             <button className="af-q-next" onClick={() => setStage("practice")}>{t(lang, "gr.toPractice")} <ArrowRight size={15} /></button>
           </div>
         ) : stage === "practice" ? (
-          <MCQRunner items={lesson.items} award={award} points={15}
+          <MCQRunner items={lesson.items} award={award} store={store} points={15}
             onFinish={(ok) => { setScore(ok); store.markDone("grammar:" + lesson.id); store.touchStreak(); store.bumpDaily("grammar"); setStage("done"); }} />
         ) : (
           <div className="af-result">
             <div className="af-result-cap">{t(lang, "gr.doneCap")}</div>
             <div className="af-result-lv">{score}/{lesson.items.length}</div>
             <p className="af-result-blurb">{t(lang, "gr.doneBlurb", { t: lesson.title })}</p>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "gr.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -1681,14 +1790,14 @@ function ListeningItem({ item, store, award, onBack }) {
         {phase === "listen" ? (
           <button className="af-q-next af-listen-go" onClick={() => setPhase("quiz")}>{t(lang, "common.toQuestions")} <ArrowRight size={15} /></button>
         ) : phase === "quiz" ? (
-          <MCQRunner items={item.items} award={award} points={18}
+          <MCQRunner items={item.items} award={award} store={store} points={18}
             onFinish={(ok) => { setScore(ok); store.markDone("listening:" + item.id); store.touchStreak(); store.bumpDaily("listening"); setPhase("done"); }} />
         ) : (
           <div className="af-result">
             <div className="af-result-cap">{t(lang, "li.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.items.length}</div>
             <p className="af-result-blurb">{t(lang, "li.doneBlurb")}</p>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "li.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -1882,14 +1991,14 @@ function ArticleItem({ item, store, award, onBack }) {
             <button className="af-q-next" onClick={() => setPhase("quiz")}>{t(lang, "common.toQuestions")} <ArrowRight size={15} /></button>
           </div>
         ) : phase === "quiz" ? (
-          <MCQRunner items={item.items} award={award} points={16}
+          <MCQRunner items={item.items} award={award} store={store} points={16}
             onFinish={(ok) => { setScore(ok); store.markDone("article:" + item.id); store.touchStreak(); setPhase("done"); }} />
         ) : (
           <div className="af-result">
             <div className="af-result-cap">{t(lang, "ar.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.items.length}</div>
             <p className="af-result-blurb">{t(lang, "ar.doneBlurb")}</p>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ar.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -1967,7 +2076,7 @@ function ClozeItem({ item, store, award, onBack }) {
             <button className="af-q-next" onClick={() => setPhase("quiz")}>{t(lang, "cl.toBlanks")} <ArrowRight size={15} /></button>
           </div>
         ) : phase === "quiz" ? (
-          <MCQRunner items={quizItems} award={award} points={16}
+          <MCQRunner items={quizItems} award={award} store={store} points={16}
             footer={passage}
             onFinish={(ok) => { setScore(ok); store.markDone("cloze:" + item.id); store.touchStreak(); setPhase("done"); }} />
         ) : (
@@ -1975,7 +2084,7 @@ function ClozeItem({ item, store, award, onBack }) {
             <div className="af-result-cap">{t(lang, "cl.doneCap")}</div>
             <div className="af-result-lv">{score}/{item.blanks.length}</div>
             <p className="af-result-blurb">{t(lang, "cl.doneBlurb")}</p>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ar.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2009,7 +2118,7 @@ export function RestateRoom({ level, store, award, onBack, exam, field }) {
         {RESTATE.length === 0 ? (
           <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "rs.empty")}</div>
         ) : phase === "quiz" ? (
-          <MCQRunner items={quizItems} award={award} points={16}
+          <MCQRunner items={quizItems} award={award} store={store} points={16}
             footer={<div className="af-restate-hint"><Replace size={13} /> {t(lang, "rs.hint")}</div>}
             onFinish={(ok) => {
               setScore(ok);
@@ -2022,7 +2131,7 @@ export function RestateRoom({ level, store, award, onBack, exam, field }) {
             <div className="af-result-cap">{t(lang, "rs.doneCap")}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
             <p className="af-result-blurb">{t(lang, "rs.doneBlurb")}</p>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2069,7 +2178,7 @@ export function OddoutRoom({ level, store, award, onBack, exam, field }) {
         {ODDOUT.length === 0 ? (
           <div className="af-empty"><AlertTriangle size={14} /> {t(lang, "oo.empty")}</div>
         ) : phase === "quiz" ? (
-          <MCQRunner items={quizItems} award={award} points={16}
+          <MCQRunner items={quizItems} award={award} store={store} points={16}
             footer={<div className="af-restate-hint"><Filter size={13} /> {t(lang, "oo.hint")}</div>}
             onFinish={(ok) => {
               setScore(ok);
@@ -2082,7 +2191,7 @@ export function OddoutRoom({ level, store, award, onBack, exam, field }) {
             <div className="af-result-cap">{t(lang, "oo.doneCap")}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
             <p className="af-result-blurb">{t(lang, "oo.doneBlurb")}</p>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2105,7 +2214,7 @@ function DeckRoom({ title, sub, empty, quizItems, items, prefix, store, award, o
         {items.length === 0 ? (
           <div className="af-empty"><AlertTriangle size={14} /> {empty}</div>
         ) : phase === "quiz" ? (
-          <MCQRunner items={quizItems} award={award} points={16}
+          <MCQRunner items={quizItems} award={award} store={store} points={16}
             footer={hint}
             onFinish={(ok) => {
               setScore(ok);
@@ -2118,7 +2227,7 @@ function DeckRoom({ title, sub, empty, quizItems, items, prefix, store, award, o
             <div className="af-result-cap">{doneCap}</div>
             <div className="af-result-lv">{score}/{items.length}</div>
             <p className="af-result-blurb">{t(lang, "deck.doneBlurb")}</p>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "common.backCatalog")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2477,7 +2586,7 @@ function ToeflIntegratedItem({ item, store, award, onBack }) {
             <div className="af-result-lv">{result && result.score != null ? result.score + "/30" : "—"}</div>
             {result && result.offline ? <div className="af-band-cap">{t(lang, "ti.offlineCap")}</div> : <div className="af-band-cap">{t(lang, "ti.aiCap")}</div>}
             <div className="af-ai-out af-ti-feedback">{result ? result.raw : ""}</div>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "ti.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2666,7 +2775,7 @@ export function MockRoom({ level, store, onBack }) {
         <div className="af-result-lv">{correct}/{questions.length}</div>
         <div className="af-band-cap">{t(lang, "mk.summary", { p: pct, e: mmss(elapsed), t: mmss(totalSec) })}</div>
       </div>
-      <SupportEndCard store={store} />
+      <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
       <div className="af-mock-breakdown">
         <div className="af-mock-bd-cap">{t(lang, "mk.byType")}</div>
         {Object.entries(breakdown).map(([ty, b]) => (
@@ -2810,7 +2919,7 @@ function ParaphraseItem({ item, store, award, onBack }) {
             <div className="af-band-cap">{result.offline ? t(lang, "ti.offlineCap") : t(lang, "ti.aiCap")}</div>
             <div className="af-ai-out af-ti-feedback">{result.raw}</div>
             <div className="af-pp-sample"><span className="af-write-cap">{t(lang, "pr.sample")}</span> {item.sample}</div>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "pr.others")} <ArrowRight size={16} /></button>
           </div>
         )}
@@ -2933,7 +3042,7 @@ function ErrorHuntItem({ item, store, award, onBack }) {
                 </div>
               ))}
             </div>
-            <SupportEndCard store={store} />
+            <ContinueNudge onContinue={onBack} /><SupportEndCard store={store} />
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "eh.others")} <ArrowRight size={16} /></button>
           </div>
         )}

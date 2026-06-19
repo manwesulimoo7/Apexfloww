@@ -12,7 +12,7 @@ import {
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
   SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, OddoutRoom,
   DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, MockRoom,
-  ParaphraseRoom, ErrorHuntRoom, FocusBar, SupportContext, SupportModal,
+  ParaphraseRoom, ErrorHuntRoom, FocusBar, SupportContext, SupportModal, ToastContext,
 } from "./modules.jsx";
 
 export default function ApexFlow() {
@@ -111,9 +111,20 @@ export default function ApexFlow() {
       setFlash("no");
       store.award(points, false, 0);
     }
+    store.addProgress(1);   // every attempt counts toward the daily goal + weekly log
     if (gainTimer.current) clearTimeout(gainTimer.current);
     gainTimer.current = setTimeout(() => { setLastGain(0); setFlash(null); }, 900);
   }
+
+  // gentle, auto-dismissing celebration toasts (achievements, goal, freeze)
+  const [toasts, setToasts] = useState([]);
+  const toastId = useRef(0);
+  function pushToast(text) {
+    const id = ++toastId.current;
+    setToasts((ts) => [...ts, { id, text }]);
+    setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== id)), 4200);
+  }
+  function dismissToast(id) { setToasts((ts) => ts.filter((x) => x.id !== id)); }
 
   // shared screen switch — keeps the original session resets in one place so
   // go(), home() and popstate (browser back) all behave identically.
@@ -163,11 +174,20 @@ export default function ApexFlow() {
 
   return (
     <LangContext.Provider value={lang}>
+    <ToastContext.Provider value={pushToast}>
     <SupportContext.Provider value={openSupport}>
     <div className={"af-root " + themeCls + (flow ? "af-flow " : "") + (flash ? "af-flash-" + flash : "") + (isMock ? "af-mockmode " : "")}>
       <Styles />
       <div className="af-bg" />
       <div className="af-scan" />
+
+      {toasts.length ? (
+        <div className="af-toasts">
+          {toasts.map((tt) => (
+            <button key={tt.id} className="af-toast" onClick={() => dismissToast(tt.id)}>{tt.text}</button>
+          ))}
+        </div>
+      ) : null}
 
       {!isMock ? <TopHUD xp={state.xp} combo={combo} maxCombo={maxCombo} flow={flow} lastGain={lastGain} onReset={resetSession} /> : null}
       {!isMock && focus ? <FocusBar remainingMs={remainingMs} distractions={distractions} durationMin={focus.durationMin} onEnd={endFocus} /> : null}
@@ -203,6 +223,7 @@ export default function ApexFlow() {
       {supportOpen ? <SupportModal onClose={() => setSupportOpen(false)} /> : null}
     </div>
     </SupportContext.Provider>
+    </ToastContext.Provider>
     </LangContext.Provider>
   );
 }
