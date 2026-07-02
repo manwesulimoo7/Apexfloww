@@ -940,6 +940,27 @@ export function Styles() {
 
 .af-wl-progress{font-size:12.5px;color:var(--accent-2);font-weight:600;margin-bottom:10px;font-family:var(--sans);}
 
+/* ===== topic library (grammar syllabus) ===== */
+.af-card-icon.af-ic-topics{color:var(--accent);background:rgba(14,107,99,.12);}
+.af-tp-section{margin-bottom:22px;}
+.af-tp-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line);}
+.af-tp-lv{font-family:var(--sans);font-weight:800;font-size:17px;color:var(--accent);}
+.af-tp-label{font-family:var(--serif);font-size:14px;color:var(--ink-soft);}
+.af-tp-stats{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:11.5px;color:var(--ink-soft);font-family:var(--sans);}
+.af-tp-accv{color:var(--accent-2);font-weight:700;}
+.af-tp-bar{display:block;margin-top:6px;}
+.af-tp-bar>i{background:var(--accent-2);}
+.af-tp-meta{display:flex;align-items:center;gap:12px;margin:14px 0 4px;font-size:12.5px;color:var(--ink-soft);font-family:var(--sans);flex-wrap:wrap;}
+.af-tp-badge{font-weight:800;color:var(--accent);border:1px solid var(--line2);border-radius:7px;padding:2px 9px;}
+.af-rep-weak{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;}
+.af-rep-weak-head{font-weight:700;color:var(--ink);font-size:13.5px;font-family:var(--serif);}
+.af-rep-weak-note{color:var(--ink-soft);font-size:11.5px;margin:3px 0 9px;}
+.af-rep-weak-row{width:100%;display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:9px 12px;margin-bottom:7px;cursor:pointer;color:var(--ink);font-family:var(--sans);font-size:13px;transition:border-color .18s ease,transform .18s ease;}
+.af-rep-weak-row:hover{border-color:var(--accent);transform:translateY(-1px);}
+.af-rep-weak-title{flex:1;text-align:left;font-weight:600;}
+.af-rep-weak-acc{color:var(--bad);font-weight:700;font-size:12px;}
+.af-rep-weak-row svg{color:var(--accent);}
+
 `}</style>
   );
 }

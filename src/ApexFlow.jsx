@@ -8,7 +8,7 @@ import { Styles } from "./styles.jsx";
 import { useStore, loadExternalContent, CONTENT_URL, SUPPORT_URL } from "./lib.js";
 import { LangContext, t } from "./i18n.js";
 import {
-  TopHUD, Catalog, Placement, VocabReview, WordListRoom, GrammarHub,
+  TopHUD, Catalog, Placement, VocabReview, WordListRoom, GrammarHub, TopicLibrary,
   ListeningRoom, WritingStudio, LexicalArena, ReadingMatrix,
   SyntaxForge, PressureCooker, ArticleRoom, ClozeRoom, RestateRoom, OddoutRoom,
   DialogueRoom, ParacompRoom, TranslateRoom, ToeflIntegratedRoom, MockRoom,
@@ -197,6 +197,7 @@ export default function ApexFlow() {
         {view === "vocab" && <VocabReview store={store} onBack={home} />}
         {view === "wordlist" && <WordListRoom store={store} onBack={home} />}
         {view === "grammar" && <GrammarHub level={level} store={store} award={award} onBack={home} />}
+        {view === "topics" && <TopicLibrary store={store} award={award} onBack={home} initialTopic={ctx.topicId} />}
         {view === "listening" && <ListeningRoom level={level} store={store} award={award} onBack={home} />}
         {view === "articles" && <ArticleRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}
         {view === "cloze" && <ClozeRoom level={level} store={store} award={award} onBack={home} exam={ctx.exam} field={ctx.field} />}

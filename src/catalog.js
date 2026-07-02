@@ -733,6 +733,7 @@ export const MODULE_INFO = {
   vocab:    { name: "Kelime Hazinesi", sub: "aralıklı tekrar (SRS)", minLv: "A1", name_en: "Vocabulary Vault", sub_en: "spaced repetition (SRS)" },
   wordlist: { name: "Kelime Listesi", sub: "seviye seviye tüm kelimeler", minLv: "A1", name_en: "Word List", sub_en: "all words, level by level" },
   grammar:  { name: "Gramer Atölyesi", sub: "seviye seviye dilbilgisi", minLv: "A1", name_en: "Grammar Workshop", sub_en: "grammar, level by level" },
+  topics:   { name: "Konu Kütüphanesi", sub: "müfredat görünümü · konu istatistikleri", minLv: "A1", name_en: "Topic Library", sub_en: "syllabus view · per-topic stats" },
   listening:{ name: "Dinleme Odası", sub: "sesli metin + sorular", minLv: "A2", name_en: "Listening Room", sub_en: "spoken text + questions" },
   articles: { name: "Okuma Parçaları", sub: "makale + sorular (kolay format)", minLv: "A2", name_en: "Reading Passages", sub_en: "article + questions (easy format)" },
   cloze:    { name: "Boşluk Doldurma", sub: "YDS/YÖKDİL cloze", minLv: "B2", name_en: "Gap Fill", sub_en: "YDS/YÖKDİL cloze" },

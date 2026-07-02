@@ -270,6 +270,13 @@ export const STRINGS = {
     "cont.more": "Bir set daha?",
     "cont.go": "Devam et",
     "wl.progress": "{c} / ~{n} kelime çalışıldı",
+    /* topic library */
+    "tp.study": "Çalış",
+    "tp.solve": "Soruları Çöz",
+    "tp.acc": "%{p} doğruluk",
+    "tp.noData": "henüz veri yok",
+    "tp.weakHead": "Çalışılması Gereken Konular",
+    "tp.weakNote": "6+ soru çözülmüş ve doğruluğu %60'ın altında kalan konular.",
   },
   en: {
     "common.check": "Check", "common.continue": "Continue", "common.finish": "Finish",
@@ -465,6 +472,13 @@ export const STRINGS = {
     "cont.more": "One more set?",
     "cont.go": "Keep going",
     "wl.progress": "{c} / ~{n} words studied",
+    /* topic library */
+    "tp.study": "Study",
+    "tp.solve": "Solve the questions",
+    "tp.acc": "{p}% accuracy",
+    "tp.noData": "no data yet",
+    "tp.weakHead": "Topics to Work On",
+    "tp.weakNote": "Topics with 6+ answered questions and accuracy below 60%.",
   },
 };
 

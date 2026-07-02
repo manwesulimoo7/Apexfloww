@@ -43,6 +43,7 @@ function defaultState() {
     streakFreeze: { available: 1, lastRefill: "", justFroze: false }, // forgiving streak
     achievements: [],        // unlocked milestone ids
     achievementsSeeded: false,
+    topicStats: {},          // grammar topicId -> { seen, correct }  (Konu Kütüphanesi)
     weeklyLog: {},           // "YYYY-MM-DD" -> questions solved that day
     daily: { date: null, vocab: 0, xp: 0, grammar: 0, listening: 0, writing: 0 },
     settings: { sound: true, rate: 0.95, apiKey: "", theme: "dark", contentUrl: "", lang: "tr" },
@@ -66,6 +67,7 @@ function loadState() {
       streakFreeze: { ...defaultState().streakFreeze, ...(parsed.streakFreeze || {}) },
       achievements: Array.isArray(parsed.achievements) ? parsed.achievements : [],
       achievementsSeeded: !!parsed.achievementsSeeded,
+      topicStats: parsed.topicStats || {},
       weeklyLog: parsed.weeklyLog || {} };
   } catch { return defaultState(); }
 }
@@ -232,6 +234,14 @@ export function useStore() {
   const seedAchievements = useCallback((ids) => update((s) =>
     s.achievementsSeeded ? s : { ...s, achievements: Array.from(new Set([...(s.achievements || []), ...(ids || [])])), achievementsSeeded: true }), [update]);
 
+  // per-grammar-topic accuracy (Konu Kütüphanesi); defensive on s.topicStats
+  const recordTopic = useCallback((topicId, isCorrect) => update((s) => {
+    if (!topicId) return s;
+    const ts = s.topicStats || {};
+    const prev = ts[topicId] || { seen: 0, correct: 0 };
+    return { ...s, topicStats: { ...ts, [topicId]: { seen: prev.seen + 1, correct: prev.correct + (isCorrect ? 1 : 0) } } };
+  }), [update]);
+
   // award(points, isCorrect, combo) — combo passed from session
   const award = useCallback((points, isCorrect, combo = 0) => {
     update((s) => {
@@ -296,7 +306,7 @@ export function useStore() {
 
   const resetProgress = useCallback(() => setState(defaultState()), []);
 
-  return { state, touchStreak, clearFreezeNotice, award, bumpDaily, addProgress, setDailyGoal, clearGoalCelebration, unlockAchievements, seedAchievements, setLevel, gradeCard, markDone, recordStat, addFocusMinutes, noteSupportShown, dismissSupport, setSetting, resetProgress };
+  return { state, touchStreak, clearFreezeNotice, award, bumpDaily, addProgress, setDailyGoal, clearGoalCelebration, unlockAchievements, seedAchievements, recordTopic, setLevel, gradeCard, markDone, recordStat, addFocusMinutes, noteSupportShown, dismissSupport, setSetting, resetProgress };
 }
 
 /* ============================================================

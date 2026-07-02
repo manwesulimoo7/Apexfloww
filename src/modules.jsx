@@ -796,7 +796,7 @@ export function PressureCooker({ onBack, award }) {
 /* ============================================================
    shared : MCQ runner (used by grammar + listening)
 ============================================================ */
-function MCQRunner({ items, award, points = 15, onFinish, footer, store }) {
+function MCQRunner({ items, award, points = 15, onFinish, footer, store, onAnswer }) {
   const lang = useLang();
   const pushToast = useToast();
   const [i, setI] = useState(0);
@@ -811,6 +811,7 @@ function MCQRunner({ items, award, points = 15, onFinish, footer, store }) {
     const correct = sel === it.ans;
     if (correct) setOk((o) => o + 1);
     award(points, correct);
+    if (onAnswer) onAnswer(correct);
   }
   function next() {
     if (i + 1 < items.length) { setI(i + 1); setSel(null); setChecked(false); }
@@ -992,6 +993,7 @@ export function Placement({ onDone, onLang }) {
 ============================================================ */
 const MODULE_ICON = {
   vocab: <Repeat size={20} />, wordlist: <ListChecks size={20} />, grammar: <GraduationCap size={20} />,
+  topics: <Brain size={20} />,
   listening: <Headphones size={20} />, articles: <BookMarked size={20} />, reading: <BookOpen size={20} />,
   lexical: <Crosshair size={20} />, syntax: <Hammer size={20} />,
   speaking: <Mic size={20} />, writing: <PenLine size={20} />, cloze: <FileText size={20} />,
@@ -1091,12 +1093,17 @@ const BADGES = [
 ];
 
 // Gelişim Raporu — per-question-type accuracy (state.stats) + focus minutes (defensive)
-function ProgressReport({ state }) {
+function ProgressReport({ state, onTopic }) {
   const lang = useLang();
   const stats = state.stats || {};
   const rows = Object.entries(stats).filter(([, v]) => v && v.t > 0).sort((a, b) => b[1].t - a[1].t);
   const focusMin = state.focusMinutes || 0;
-  if (!rows.length && !focusMin) return null;
+  // weak grammar topics: 6+ answers, accuracy below 60%
+  const weak = Object.entries(state.topicStats || {})
+    .map(([id, v]) => ({ id, seen: v.seen || 0, pct: v.seen ? Math.round((v.correct / v.seen) * 100) : 0, topic: GRAMMAR.find((g) => g.id === id) }))
+    .filter((w) => w.topic && w.seen >= 6 && w.pct < 60)
+    .sort((a, b) => a.pct - b.pct);
+  if (!rows.length && !focusMin && !weak.length) return null;
   return (
     <div className="af-report">
       <div className="af-report-head"><BarChart3 size={15} /> {t(lang, "rep.title")}</div>
@@ -1113,6 +1120,19 @@ function ProgressReport({ state }) {
               </div>
             );
           })}
+        </div>
+      ) : null}
+      {weak.length ? (
+        <div className="af-rep-weak">
+          <div className="af-rep-weak-head">{t(lang, "tp.weakHead")}</div>
+          <div className="af-rep-weak-note">{t(lang, "tp.weakNote")}</div>
+          {weak.map((w) => (
+            <button key={w.id} className="af-rep-weak-row" onClick={() => onTopic && onTopic(w.id)}>
+              <span className="af-rep-weak-title">{w.topic.title}</span>
+              <span className="af-rep-weak-acc">{t(lang, "tp.acc", { p: w.pct })}</span>
+              <ArrowRight size={13} />
+            </button>
+          ))}
         </div>
       ) : null}
     </div>
@@ -1430,7 +1450,7 @@ export function Catalog({ store, go, content = {}, onFocus }) {
         </div>
       )}
 
-      <ProgressReport state={state} />
+      <ProgressReport state={state} onTopic={(id) => go("topics", { topicId: id })} />
       <Badges state={state} />
 
       <div className="af-settings">
@@ -1664,9 +1684,9 @@ export function GrammarHub({ level, store, award, onBack }) {
     </>
   );
 }
-function GrammarLesson({ lesson, store, award, onBack }) {
+function GrammarLesson({ lesson, store, award, onBack, startAt }) {
   const lang = useLang();
-  const [stage, setStage] = useState("read"); // read -> practice -> done
+  const [stage, setStage] = useState(startAt || "read"); // read -> practice -> done
   const [score, setScore] = useState(0);
   return (
     <>
@@ -1679,6 +1699,7 @@ function GrammarLesson({ lesson, store, award, onBack }) {
           </div>
         ) : stage === "practice" ? (
           <MCQRunner items={lesson.items} award={award} store={store} points={15}
+            onAnswer={(c) => store.recordTopic && store.recordTopic(lesson.id, c)}
             onFinish={(ok) => { setScore(ok); store.markDone("grammar:" + lesson.id); store.touchStreak(); store.bumpDaily("grammar"); setStage("done"); }} />
         ) : (
           <div className="af-result">
@@ -1689,6 +1710,89 @@ function GrammarLesson({ lesson, store, award, onBack }) {
             <button className="af-q-next af-result-go" onClick={onBack}>{t(lang, "gr.others")} <ArrowRight size={16} /></button>
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   TOPIC LIBRARY  (grammar syllabus view + per-topic stats)
+   Reuses GrammarLesson for detail + quiz; no new quiz engine.
+============================================================ */
+const firstSentence = (txt) => {
+  const m = (txt || "").match(/^[^.!?]*[.!?]/);
+  return m ? m[0] : (txt || "").slice(0, 90) + "…";
+};
+export function TopicLibrary({ store, award, onBack, initialTopic }) {
+  const lang = useLang();
+  const [open, setOpen] = useState(() => GRAMMAR.find((g) => g.id === initialTopic) || null);
+  const [reading, setReading] = useState(!!initialTopic);  // detail view (full exp) before quiz
+  const ts = store.state.topicStats || {};
+
+  const groups = useMemo(() => LV_ORDER
+    .map((lv) => ({ lv, items: GRAMMAR.filter((g) => g.lv === lv) }))
+    .filter((g) => g.items.length), []);
+
+  if (open && !reading) {
+    return <GrammarLesson lesson={open} store={store} award={award} startAt="practice"
+      onBack={() => { setOpen(null); }} />;
+  }
+  if (open && reading) {
+    const st = ts[open.id];
+    return (
+      <>
+        <ModuleBar title={open.title} sub={t(lang, "gr.sub", { lv: open.lv })} onBack={() => { setOpen(null); setReading(false); }} />
+        <div className="af-substage">
+          <div className="af-lesson">
+            <div className="af-lesson-exp">{pick(lang, open.exp, open.exp_en)}</div>
+            <div className="af-tp-meta">
+              <span className="af-tp-badge">{open.lv}</span>
+              <span>{t(lang, "gr.nEx", { n: open.items.length })}</span>
+              <span className={st && st.seen ? "af-tp-accv" : ""}>
+                {st && st.seen ? t(lang, "tp.acc", { p: Math.round((st.correct / st.seen) * 100) }) : t(lang, "tp.noData")}
+              </span>
+            </div>
+            <button className="af-q-next" onClick={() => setReading(false)}>{t(lang, "tp.solve")} <ArrowRight size={15} /></button>
+          </div>
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <ModuleBar title={pick(lang, MODULE_INFO.topics.name, MODULE_INFO.topics.name_en)}
+        sub={pick(lang, MODULE_INFO.topics.sub, MODULE_INFO.topics.sub_en)} onBack={onBack} />
+      <div className="af-substage">
+        {groups.map((g) => (
+          <div key={g.lv} className="af-tp-section">
+            <div className="af-tp-head">
+              <span className="af-tp-lv">{g.lv}</span>
+              <span className="af-tp-label">{pick(lang, levelMeta(g.lv).label, levelMeta(g.lv).label_en)}</span>
+            </div>
+            <div className="af-grid">
+              {g.items.map((l) => {
+                const st = ts[l.id];
+                const pct = st && st.seen ? Math.round((st.correct / st.seen) * 100) : null;
+                return (
+                  <button key={l.id} className="af-card" onClick={() => { setOpen(l); setReading(true); }}>
+                    <div className="af-card-top">
+                      <span className="af-card-icon af-ic-topics"><Brain size={20} /></span>
+                      <span className="af-card-tag">{l.lv}</span>
+                    </div>
+                    <div className="af-card-name">{l.title}</div>
+                    <div className="af-card-desc">{firstSentence(pick(lang, l.exp, l.exp_en))}</div>
+                    <div className="af-tp-stats">
+                      <span>{t(lang, "gr.nEx", { n: l.items.length })}</span>
+                      <span className={pct != null ? "af-tp-accv" : ""}>{pct != null ? t(lang, "tp.acc", { p: pct }) : t(lang, "tp.noData")}</span>
+                    </div>
+                    {pct != null ? <span className="af-task-bar af-tp-bar"><i style={{ width: pct + "%" }} /></span> : null}
+                    <div className="af-card-go">{t(lang, "tp.study")} <ArrowRight size={15} /></div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );
